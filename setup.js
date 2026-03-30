@@ -1,0 +1,472 @@
+const fs = require('fs');
+const path = require('path');
+
+// All files with their content
+const files = {
+  'app/globals.css': `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-black text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+  
+  .glass-hover {
+    @apply hover:bg-white/10 transition-all duration-300;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-600;
+  }
+}`,
+
+  'app/layout.tsx': `import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "CollabHub - Collaborate Better",
+  description: "A modern collaboration platform built with Next.js and Supabase",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <div className="min-h-screen flex flex-col bg-black">
+          <Navbar />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </div>
+      </body>
+    </html>
+  );
+}`,
+
+  'app/page.tsx': `'use client';
+
+import { motion } from 'framer-motion';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Container from '@/components/ui/Container';
+
+export default function Home() {
+  return (
+    <div className="py-20">
+      <Container>
+        {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-20"
+        >
+          <h1 className="text-6xl font-bold mb-6">
+            Welcome to{' '}
+            <span className="text-gradient">CollabHub</span>
+          </h1>
+          <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+            A production-ready Next.js platform with Supabase integration,
+            featuring a beautiful dark theme and smooth animations.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button size="lg">
+              Get Started
+            </Button>
+            <Button variant="outline" size="lg">
+              Learn More
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Features Grid */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="grid md:grid-cols-3 gap-6"
+        >
+          <Card title="Next.js 14" icon="🚀">
+            Built with the latest Next.js App Router for optimal performance
+            and developer experience.
+          </Card>
+          
+          <Card title="Supabase" icon="⚡">
+            Integrated with Supabase for authentication, database, and storage
+            out of the box.
+          </Card>
+          
+          <Card title="Beautiful UI" icon="✨">
+            Glassmorphism design with purple gradients and smooth Framer Motion
+            animations.
+          </Card>
+        </motion.div>
+      </Container>
+    </div>
+  );
+}`,
+
+  'lib/supabaseClient.ts': `import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase environment variables. Please check your .env.local file.'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);`,
+
+  'lib/utils.ts': `import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}`,
+
+  'components/layout/Navbar.tsx': `'use client';
+
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import Button from '@/components/ui/Button';
+
+export default function Navbar() {
+  return (
+    <motion.nav
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      className="glass sticky top-0 z-50 border-b border-white/10"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2">
+            <span className="text-2xl font-bold text-gradient">
+              CollabHub
+            </span>
+          </Link>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link
+              href="/"
+              className="text-gray-300 hover:text-white transition-colors"
+            >
+              Home
+            </Link>
+            <Link
+              href="/features"
+              className="text-gray-300 hover:text-white transition-colors"
+            >
+              Features
+            </Link>
+            <Link
+              href="/pricing"
+              className="text-gray-300 hover:text-white transition-colors"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/docs"
+              className="text-gray-300 hover:text-white transition-colors"
+            >
+              Docs
+            </Link>
+          </div>
+
+          {/* Auth Buttons */}
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm">
+              Sign In
+            </Button>
+            <Button size="sm">
+              Sign Up
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.nav>
+  );
+}`,
+
+  'components/layout/Footer.tsx': `import Link from 'next/link';
+
+export default function Footer() {
+  return (
+    <footer className="glass border-t border-white/10 mt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div className="col-span-1 md:col-span-2">
+            <h3 className="text-2xl font-bold text-gradient mb-4">
+              CollabHub
+            </h3>
+            <p className="text-gray-400 mb-4">
+              A modern collaboration platform built with Next.js and Supabase.
+              Empowering teams to work better together.
+            </p>
+            <p className="text-sm text-gray-500">
+              © 2024 CollabHub. All rights reserved.
+            </p>
+          </div>
+
+          {/* Product Links */}
+          <div>
+            <h4 className="font-semibold mb-4">Product</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/features" className="text-gray-400 hover:text-white transition-colors">
+                  Features
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="/docs" className="text-gray-400 hover:text-white transition-colors">
+                  Documentation
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Company Links */}
+          <div>
+            <h4 className="font-semibold mb-4">Company</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/about" className="text-gray-400 hover:text-white transition-colors">
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
+                  Contact
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}`,
+
+  'components/ui/Button.tsx': `'use client';
+
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { ButtonHTMLAttributes, ReactNode } from 'react';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export default function Button({
+  children,
+  variant = 'default',
+  size = 'md',
+  className,
+  ...props
+}: ButtonProps) {
+  const baseStyles = 'font-semibold rounded-lg transition-all duration-200';
+  
+  const variants = {
+    default: 'bg-gradient-purple text-white hover:opacity-90',
+    outline: 'glass border-2 border-purple-500 text-purple-400 hover:bg-purple-500/10',
+    ghost: 'text-gray-300 hover:text-white hover:bg-white/5',
+  };
+  
+  const sizes = {
+    sm: 'px-4 py-2 text-sm',
+    md: 'px-6 py-3 text-base',
+    lg: 'px-8 py-4 text-lg',
+  };
+
+  return (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className={cn(baseStyles, variants[variant], sizes[size], className)}
+      {...props}
+    >
+      {children}
+    </motion.button>
+  );
+}`,
+
+  'components/ui/Card.tsx': `'use client';
+
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { ReactNode } from 'react';
+
+interface CardProps {
+  children: ReactNode;
+  title?: string;
+  icon?: string;
+  className?: string;
+}
+
+export default function Card({ children, title, icon, className }: CardProps) {
+  return (
+    <motion.div
+      whileHover={{ y: -5 }}
+      className={cn(
+        'glass glass-hover rounded-xl p-6',
+        className
+      )}
+    >
+      {icon && (
+        <div className="text-4xl mb-4">{icon}</div>
+      )}
+      {title && (
+        <h3 className="text-xl font-bold mb-3">{title}</h3>
+      )}
+      <div className="text-gray-400">
+        {children}
+      </div>
+    </motion.div>
+  );
+}`,
+
+  'components/ui/Container.tsx': `import { cn } from '@/lib/utils';
+import { ReactNode } from 'react';
+
+interface ContainerProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export default function Container({ children, className }: ContainerProps) {
+  return (
+    <div className={cn('max-w-7xl mx-auto px-4 sm:px-6 lg:px-8', className)}>
+      {children}
+    </div>
+  );
+}`,
+
+  'types/index.ts': `// User types
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+  created_at: string;
+}
+
+// Add more types as needed for your application`,
+
+  'hooks/useSupabase.ts': `'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { User } from '@/types';
+
+export function useSupabase() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user as User ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user as User ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return { user, loading, supabase };
+}`,
+};
+
+console.log('╔══════════════════════════════════════════════════════════╗');
+console.log('║           CollabHub - Automatic Setup                   ║');
+console.log('╚══════════════════════════════════════════════════════════╝');
+console.log();
+
+// Create all files
+console.log('Creating project files...\n');
+let created = 0;
+let skipped = 0;
+
+for (const [filepath, content] of Object.entries(files)) {
+  const fullPath = path.join(__dirname, filepath);
+  const dir = path.dirname(fullPath);
+  
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  // Create file
+  if (!fs.existsSync(fullPath)) {
+    fs.writeFileSync(fullPath, content, 'utf8');
+    console.log(\`✓ Created: \${filepath}\`);
+    created++;
+  } else {
+    console.log(\`○ Exists:  \${filepath}\`);
+    skipped++;
+  }
+}
+
+console.log();
+console.log('╔══════════════════════════════════════════════════════════╗');
+console.log('║               Setup Complete!                            ║');
+console.log('╚══════════════════════════════════════════════════════════╝');
+console.log();
+console.log(\`  Files created: \${created}\`);
+console.log(\`  Files skipped: \${skipped}\`);
+console.log();
+console.log('Next steps:');
+console.log('  1. Run: npm install');
+console.log('  2. Copy .env.example to .env.local');
+console.log('  3. Add your Supabase credentials to .env.local');
+console.log('  4. Run: npm run dev');
+console.log('  5. Open: http://localhost:3000');
+console.log();
