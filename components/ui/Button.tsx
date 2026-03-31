@@ -17,12 +17,12 @@ export default function Button({
   className,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-semibold rounded-lg transition-all duration-200';
+  const baseStyles = 'font-semibold rounded-lg transition-all duration-300 border border-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70';
   
   const variants = {
-    default: 'bg-gradient-purple text-white hover:opacity-90',
-    outline: 'glass border-2 border-purple-500 text-purple-400 hover:bg-purple-500/10',
-    ghost: 'text-gray-300 hover:text-white hover:bg-white/5',
+    default: 'bg-[linear-gradient(135deg,#6d28d9,#4f46e5)] text-white shadow-[0_8px_28px_rgba(79,70,229,0.35)] hover:-translate-y-0.5 hover:shadow-[0_12px_34px_rgba(124,58,237,0.45)]',
+    outline: 'bg-[rgba(26,26,46,0.7)] border border-[var(--accent)] text-[var(--accent-soft)] hover:bg-[rgba(124,58,237,0.12)] hover:text-white',
+    ghost: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5',
   };
   
   const sizes = {

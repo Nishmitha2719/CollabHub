@@ -50,7 +50,7 @@ export default function Modal({ isOpen, onClose, children, title, maxWidth = 'md
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+            className="fixed inset-0 overlay-blur z-50"
           />
 
           {/* Modal */}
@@ -60,13 +60,13 @@ export default function Modal({ isOpen, onClose, children, title, maxWidth = 'md
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', duration: 0.3 }}
-              className={`glass rounded-2xl border border-white/10 p-6 w-full ${maxWidthClasses[maxWidth]} relative`}
+              className={`rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)]/95 backdrop-blur-xl p-6 w-full ${maxWidthClasses[maxWidth]} relative shadow-[0_18px_45px_rgba(0,0,0,0.45)]`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                 aria-label="Close modal"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

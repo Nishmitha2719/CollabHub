@@ -16,7 +16,7 @@ export default function Card({ children, title, icon, className }: CardProps) {
     <motion.div
       whileHover={{ y: -5 }}
       className={cn(
-        'glass glass-hover rounded-xl p-6',
+        'glass glass-hover rounded-xl p-6 shadow-[0_10px_30px_rgba(0,0,0,0.3)]',
         className
       )}
     >
@@ -26,7 +26,7 @@ export default function Card({ children, title, icon, className }: CardProps) {
       {title && (
         <h3 className="text-xl font-bold mb-3">{title}</h3>
       )}
-      <div className="text-gray-400">
+      <div className="text-secondary">
         {children}
       </div>
     </motion.div>

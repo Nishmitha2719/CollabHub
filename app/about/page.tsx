@@ -51,7 +51,7 @@ export default function AboutPage() {
             About <span className="text-gradient">CollabHub</span>
           </h1>
           <p className="text-xl text-gray-400 leading-relaxed">
-            We're on a mission to revolutionize student collaboration by connecting
+            We&apos;re on a mission to revolutionize student collaboration by connecting
             talented individuals with innovative projects. Build, learn, and succeed
             together.
           </p>
@@ -71,7 +71,7 @@ export default function AboutPage() {
               </h2>
               <p className="text-lg text-gray-400 leading-relaxed mb-6">
                 Every great project starts with a great team. We believe that
-                students shouldn't struggle to find collaborators who share their
+                students shouldn&apos;t struggle to find collaborators who share their
                 passion and vision.
               </p>
               <p className="text-lg text-gray-400 leading-relaxed">

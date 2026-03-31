@@ -17,6 +17,14 @@ export default function ProjectDetailPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   
+  const getSkillColorClass = (skill: string) => {
+    const key = skill.toLowerCase();
+    if (key.includes('node')) return 'skill-pill-purple';
+    if (key.includes('react')) return 'skill-pill-orange';
+    if (key.includes('data') || key.includes('analysis') || key.includes('sql') || key.includes('python')) return 'skill-pill-teal';
+    return 'skill-pill-blue';
+  };
+  
   // Mock project data
   const mockProject = {
     id: params.id,
@@ -163,7 +171,7 @@ Tech Stack:
                 {mockProject.skills.map((skill, index) => (
                   <span
                     key={index}
-                    className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 rounded-full text-sm font-medium"
+                    className={`skill-pill text-sm font-medium px-4 py-2 ${getSkillColorClass(skill)}`}
                   >
                     {skill}
                   </span>
@@ -192,7 +200,7 @@ Tech Stack:
           <div className="glass rounded-2xl p-12 border border-white/10 text-center">
             <h2 className="text-3xl font-bold mb-4">Interested in Joining?</h2>
             <p className="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">
-              Apply now to be part of this exciting project. We'll review your application and get back to you soon!
+              Apply now to be part of this exciting project. We&apos;ll review your application and get back to you soon!
             </p>
             <div className="flex gap-4 justify-center">
               <Button onClick={handleApply} size="lg" className="px-12">
