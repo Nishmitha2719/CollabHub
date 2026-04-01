@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
@@ -15,15 +15,7 @@ export default function SavedProjectsPage() {
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/login?redirectTo=/saved');
-      return;
-    }
-    loadSavedProjects();
-  }, [user]);
-
-  const loadSavedProjects = async () => {
+  const loadSavedProjects = useCallback(async () => {
     if (!user) return;
     try {
       const data = await getSavedProjects(user.id);
@@ -34,7 +26,15 @@ export default function SavedProjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/login?redirectTo=/saved');
+      return;
+    }
+    loadSavedProjects();
+  }, [user, router, loadSavedProjects]);
 
   if (loading) {
     return (
@@ -55,7 +55,7 @@ export default function SavedProjectsPage() {
             Saved <span className="text-gradient">Projects</span>
           </h1>
           <p className="text-gray-400 mb-8">
-            Projects you've bookmarked for later
+            Projects you&apos;ve bookmarked for later
           </p>
 
           {savedProjects.length === 0 ? (

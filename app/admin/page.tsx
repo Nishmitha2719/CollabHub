@@ -185,7 +185,7 @@ function ProjectCard({ project, onApprove, onReject, onDelete, actionLoading }: 
       {project.skills?.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {project.skills.map((skill: string, i: number) => (
-            <span key={i} className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">{skill}</span>
+            <span key={i} className="skill-pill text-xs px-3 py-1">{skill}</span>
           ))}
         </div>
       )}

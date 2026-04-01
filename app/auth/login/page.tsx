@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
+import { FaGoogle } from "react-icons/fa";
+import { FaGithub } from "react-icons/fa";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -122,13 +124,13 @@ export default function LoginPage() {
                 onClick={handleGoogleSignIn}
                 className="flex items-center justify-center px-4 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition"
               >
-                <span className="mr-2">🔍</span> Google
+                <span className="mr-2"><FaGoogle /></span> Google
               </button>
               <button
                 onClick={handleGithubSignIn}
                 className="flex items-center justify-center px-4 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition"
               >
-                <span className="mr-2">⚡</span> GitHub
+                <span className="mr-2"><FaGithub /></span> GitHub
               </button>
             </div>
           </div>

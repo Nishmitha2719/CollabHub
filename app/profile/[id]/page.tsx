@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
@@ -30,18 +30,7 @@ export default function ProfilePage() {
     portfolio_url: '',
   });
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      router.push(`/auth/login?redirectTo=/profile/${params.id as string}`);
-      return;
-    }
-
-    loadProfile(params.id as string);
-  }, [authLoading, user, params.id, router]);
-
-  const loadProfile = async (id: string) => {
+  const loadProfile = useCallback(async (id: string) => {
     try {
       setLoading(true);
       setError('');
@@ -79,7 +68,18 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      router.push(`/auth/login?redirectTo=/profile/${params.id as string}`);
+      return;
+    }
+
+    loadProfile(params.id as string);
+  }, [authLoading, user, params.id, router, loadProfile]);
 
   const isOwnProfile = user?.id === (params.id as string);
 

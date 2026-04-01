@@ -3,31 +3,221 @@
 @tailwind utilities;
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
+  --bg-base: #0a0a0f;
+  --bg-surface: #13131f;
+  --bg-elevated: #1a1a2e;
+  --bg-input: #1e1e30;
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6b6b85;
+  --accent: #7c3aed;
+  --accent-soft: #a78bfa;
+  --accent-blue: #4f46e5;
+  --border: rgba(255, 255, 255, 0.07);
+  --glow: 0 0 20px rgba(124, 58, 237, 0.3);
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
 }
 
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+
   body {
-    @apply bg-black text-white;
+    background: radial-gradient(circle at 12% -10%, rgba(124, 58, 237, 0.15), transparent 42%),
+      radial-gradient(circle at 95% 10%, rgba(37, 99, 235, 0.16), transparent 38%),
+      var(--bg-base);
+    color: var(--text-primary);
     font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100vh;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: rgba(124, 58, 237, 0.65);
+    box-shadow: 0 0 0 2px rgba(120, 80, 255, 0.5);
+  }
+
+  table {
+    border-color: var(--border);
+  }
+
+  tbody tr:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.04);
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl;
+    background: rgba(19, 19, 31, 0.72);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    @apply rounded-2xl;
   }
   
   .glass-hover {
-    @apply hover:bg-white/10 transition-all duration-300;
+    @apply transition-all duration-300;
+  }
+
+  .glass-hover:hover {
+    background: rgba(26, 26, 46, 0.86);
   }
   
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-600;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--accent-soft), var(--accent-blue));
   }
 
   .glow {
-    @apply shadow-[0_0_20px_rgba(139,92,246,0.5)];
+    box-shadow: var(--glow);
+  }
+
+  .surface-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+  }
+
+  .overlay-blur {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+  }
+
+  .text-secondary {
+    color: var(--text-secondary);
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .bg-elevated {
+    background: var(--bg-elevated);
+  }
+
+  .bg-surface {
+    background: var(--bg-surface);
+  }
+
+  .bg-input-surface {
+    background: var(--bg-input);
+  }
+
+  .bubble-bg-layer {
+    @apply pointer-events-none fixed inset-0 z-0;
+  }
+
+  .bubble-bg-overlay {
+    @apply pointer-events-none fixed inset-0 z-0;
+    background:
+      radial-gradient(circle at 18% 8%, rgba(124, 58, 237, 0.12), transparent 42%),
+      radial-gradient(circle at 82% 18%, rgba(79, 70, 229, 0.1), transparent 40%),
+      radial-gradient(circle at 52% 110%, rgba(37, 99, 235, 0.08), transparent 38%);
+  }
+
+  .bubble-content-layer {
+    @apply relative z-10;
+  }
+
+  .skill-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.9);
+    color: #e5e7eb;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 1px 2px rgba(15, 23, 42, 0.7);
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.28s ease, border-color 0.28s ease, color 0.28s ease;
+  }
+
+  .skill-pill::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    border: 1px solid rgba(148, 163, 184, 0.0);
+    box-shadow: none;
+    opacity: 0;
+    transition: opacity 0.28s ease, box-shadow 0.28s ease;
+    pointer-events: none;
+  }
+
+  .skill-pill:hover,
+  .skill-pill:focus-visible {
+    transform: translateY(-2px) scale(1.04);
+    border-color: rgba(216, 180, 255, 0.88);
+    color: #f5f2ff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 0 0 1px rgba(167, 139, 250, 0.48),
+      0 0 22px rgba(124, 58, 237, 0.45),
+      0 0 44px rgba(124, 58, 237, 0.28);
+  }
+
+  .skill-pill:hover::after,
+  .skill-pill:focus-visible::after {
+    opacity: 1;
+    border-color: rgba(196, 181, 253, 0.6);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.42), inset 0 0 12px rgba(168, 85, 247, 0.18);
+  }
+
+  .skill-pill-active {
+    border-color: rgba(233, 213, 255, 0.98);
+    color: #faf8ff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 0 0 1px rgba(212, 180, 255, 0.68),
+      0 0 24px rgba(147, 51, 234, 0.48),
+      0 0 48px rgba(124, 58, 237, 0.32);
+  }
+
+  .skill-pill-active::after {
+    opacity: 1;
+    border-color: rgba(233, 213, 255, 0.92);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.48), inset 0 0 10px rgba(196, 181, 253, 0.22);
+  }
+
+  /* Color variants for skill pill text/border accents */
+  .skill-pill-purple {
+    color: #e9d5ff;
+    border-color: rgba(168, 85, 247, 0.85);
+  }
+
+  .skill-pill-teal {
+    color: #a7f3d0;
+    border-color: rgba(45, 212, 191, 0.85);
+  }
+
+  .skill-pill-orange {
+    color: #fed7aa;
+    border-color: rgba(249, 115, 22, 0.9);
+  }
+
+  .skill-pill-blue {
+    color: #bfdbfe;
+    border-color: rgba(59, 130, 246, 0.85);
   }
 }
