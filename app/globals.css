@@ -25,9 +25,7 @@
   }
 
   body {
-    background: radial-gradient(circle at 12% -10%, rgba(124, 58, 237, 0.15), transparent 42%),
-      radial-gradient(circle at 95% 10%, rgba(37, 99, 235, 0.16), transparent 38%),
-      var(--bg-base);
+    background: var(--bg-base);
     color: var(--text-primary);
     font-feature-settings: "rlig" 1, "calt" 1;
     min-height: 100vh;
@@ -54,6 +52,20 @@
     box-shadow: 0 0 0 2px rgba(120, 80, 255, 0.5);
   }
 
+  /* Dark theme styling for number input arrows */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: inner-spin-button;
+    background-color: #000;
+    border-radius: 0;
+    margin: 0;
+    filter: invert(1);
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
   table {
     border-color: var(--border);
   }
@@ -64,6 +76,26 @@
 
   tbody tr:nth-child(even) {
     background: rgba(255, 255, 255, 0.04);
+  }
+
+  /* Global dark scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #000000;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #000000;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 9999px;
+    border: 2px solid #000000;
   }
 }
 
@@ -122,16 +154,44 @@
     background: var(--bg-input);
   }
 
+  .select-dark {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+  }
+
+  .select-dark:focus {
+    outline: none;
+    border-color: rgba(124, 58, 237, 0.65);
+    box-shadow: 0 0 0 2px rgba(120, 80, 255, 0.5);
+  }
+
+  .select-dark option {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+  }
+
+  .select-dark option:hover,
+  .select-dark option:focus {
+    background-image: linear-gradient(135deg, rgba(124, 58, 237, 0.75), rgba(79, 70, 229, 0.9));
+    color: var(--text-primary);
+  }
+
+  /* When an option is chosen, keep it dark instead of purple */
+  .select-dark option:checked {
+    background-image: none;
+    background-color: #000;
+    color: var(--text-primary);
+  }
+
   .bubble-bg-layer {
     @apply pointer-events-none fixed inset-0 z-0;
   }
 
   .bubble-bg-overlay {
     @apply pointer-events-none fixed inset-0 z-0;
-    background:
-      radial-gradient(circle at 18% 8%, rgba(124, 58, 237, 0.12), transparent 42%),
-      radial-gradient(circle at 82% 18%, rgba(79, 70, 229, 0.1), transparent 40%),
-      radial-gradient(circle at 52% 110%, rgba(37, 99, 235, 0.08), transparent 38%);
+    background: transparent;
   }
 
   .bubble-content-layer {
