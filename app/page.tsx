@@ -86,8 +86,6 @@ export default function Home() {
       <div className="bubble-content-layer">
         {/* Hero Section */}
         <section className="relative min-h-[calc(100svh-4rem)] flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/0 via-transparent to-black/25" />
-
           <Container>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -174,7 +172,7 @@ export default function Home() {
       </section>
 
       {/* Personalized Recommendations */}
-      <section className="py-20 bg-gradient-to-b from-purple-900/10 to-transparent relative">
+      <section className="py-20 relative">
         <Container>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -242,7 +240,7 @@ export default function Home() {
       </section>
 
       {/* Success Stories */}
-      <section className="py-20 bg-gradient-to-b from-blue-900/10 to-transparent relative">
+      <section className="py-20 relative">
         <Container>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -318,7 +316,6 @@ export default function Home() {
             viewport={{ once: true }}
             className="glass rounded-3xl p-12 md:p-16 text-center relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10" />
             <div className="relative z-10">
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 Ready to Start Building?

@@ -1,39 +1,45 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import Container from '@/components/ui/Container';
-import Card from '@/components/ui/Card';
+import { motion } from "framer-motion";
+import { FaHandshake } from "react-icons/fa";
+import { HiRocketLaunch } from "react-icons/hi2";
+import { GiBullseye } from "react-icons/gi";
+import { GiLightBulb } from "react-icons/gi";
+import { HiTrophy } from "react-icons/hi2";
 import { GiWorld } from "react-icons/gi";
+import Container from "@/components/ui/Container";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 export default function AboutPage() {
   const features = [
     {
-      icon: '🤝',
+      icon: <FaHandshake />,
       title: 'Connect with Talented Students',
       description: 'Find passionate teammates who share your vision and complement your skills.',
     },
     {
-      icon: '🚀',
+      icon: <HiRocketLaunch />,
       title: 'Bring Ideas to Life',
       description: 'Transform concepts into reality with the right team and resources.',
     },
     {
-      icon: '🎯',
+      icon: <GiBullseye />,
       title: 'Smart Matching',
       description: 'Our algorithm matches you with projects based on your skills and interests.',
     },
     {
-      icon: '💡',
+      icon: <GiLightBulb />,
       title: 'Learn & Grow',
       description: 'Gain real-world experience while building your portfolio.',
     },
     {
-      icon: '🏆',
+      icon: <HiTrophy />,
       title: 'Showcase Success',
       description: 'Display completed projects and achievements to future employers.',
     },
     {
-      icon: <GiWorld className="text-5xl" />,
+      icon: <GiWorld />,
       title: 'Global Community',
       description: 'Collaborate with students from universities worldwide.',
     },
@@ -103,8 +109,8 @@ export default function AboutPage() {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card className="h-full hover:shadow-[0_0_30px_rgba(139,92,246,0.2)] transition-all">
-                  <div className="text-5xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                  <div className="text-5xl mb-4 text-white">{feature.icon}</div>
+                  <h3 className="text-xl font-bold mb-3 text-white">{feature.title}</h3>
                   <p className="text-gray-400">{feature.description}</p>
                 </Card>
               </motion.div>
@@ -128,18 +134,21 @@ export default function AboutPage() {
               together. Your next breakthrough is just one connection away.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="/projects"
-                className="px-8 py-4 bg-gradient-purple text-white font-semibold rounded-lg hover:opacity-90 transition-all"
+              <Button
+                size="lg"
+                className="w-full sm:w-auto px-12"
+                onClick={() => (window.location.href = "/projects")}
               >
                 Browse Projects
-              </a>
-              <a
-                href="/auth/signup"
-                className="px-8 py-4 glass border-2 border-purple-500 text-purple-400 font-semibold rounded-lg hover:bg-purple-500/10 transition-all"
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto px-12"
+                onClick={() => (window.location.href = "/auth/signup")}
               >
                 Sign Up Free
-              </a>
+              </Button>
             </div>
           </div>
         </motion.section>
