@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Container from '@/components/ui/Container';
 import Card from '@/components/ui/Card';
+import { GiWorld } from "react-icons/gi";
 
 export default function AboutPage() {
   const features = [
@@ -32,7 +33,7 @@ export default function AboutPage() {
       description: 'Display completed projects and achievements to future employers.',
     },
     {
-      icon: '🌍',
+      icon: <GiWorld className="text-5xl" />,
       title: 'Global Community',
       description: 'Collaborate with students from universities worldwide.',
     },

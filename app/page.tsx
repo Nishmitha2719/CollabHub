@@ -8,7 +8,7 @@ import BubbleBackground from '@/src/components/BubbleBackground';
 import ProjectCard from '@/components/home/ProjectCard';
 import CategoryCard from '@/components/home/CategoryCard';
 import SuccessStoryCard from '@/components/home/SuccessStoryCard';
-import { FaRobot } from "react-icons/fa6";
+import { FaRobot } from "react-icons/fa";
 import { GiWorld } from "react-icons/gi";
 import { GiRadioTower } from "react-icons/gi";
 import { ImMobile } from "react-icons/im";
