@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
 import { motion } from 'framer-motion';
+import { FaRegStar } from "react-icons/fa";
 
 interface SuccessStoryCardProps {
   title: string;
@@ -37,8 +38,8 @@ export default function SuccessStoryCard({
         {/* Rating */}
         <div className="flex items-center mb-4">
           {[...Array(5)].map((_, i) => (
-            <span key={i} className={i < rating ? 'text-yellow-400' : 'text-gray-700'}>
-              ⭐
+            <span key={i} className={i < rating ? "text-yellow-400" : "text-gray-700"}>
+              <FaRegStar />
             </span>
           ))}
           <span className="ml-2 text-sm text-secondary">({rating}.0)</span>

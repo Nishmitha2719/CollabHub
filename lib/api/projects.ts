@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import type { Skill } from '@/types/database';
 
 export interface Project {
   id: string;
@@ -232,6 +233,22 @@ export async function deleteProject(id: string): Promise<boolean> {
   } catch (error) {
     console.error('Error deleting project:', error);
     return false;
+  }
+}
+
+// Get all skills (for post-project form)
+export async function getAllSkills(): Promise<Skill[]> {
+  try {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    return (data || []) as Skill[];
+  } catch (error) {
+    console.error('Error fetching skills:', error);
+    return [];
   }
 }
 

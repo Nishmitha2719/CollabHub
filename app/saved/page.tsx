@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { BsPinAngleFill } from "react-icons/bs";
 import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import ProjectCard from '@/components/home/ProjectCard';
@@ -60,7 +61,9 @@ export default function SavedProjectsPage() {
 
           {savedProjects.length === 0 ? (
             <div className="glass rounded-2xl p-12 text-center border border-white/10">
-              <div className="text-6xl mb-4">📌</div>
+              <div className="text-6xl mb-4 flex justify-center text-white">
+                <BsPinAngleFill />
+              </div>
               <p className="text-gray-400 mb-4 text-lg">No saved projects yet</p>
               <button
                 onClick={() => router.push('/projects')}

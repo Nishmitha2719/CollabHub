@@ -157,7 +157,7 @@ export default function PostProjectPage() {
                       required
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-3 select-dark"
                     >
                       <option value="AI/ML">AI/ML</option>
                       <option value="Web Dev">Web Dev</option>
@@ -174,7 +174,7 @@ export default function PostProjectPage() {
                       required
                       value={formData.difficulty}
                       onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as any })}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-3 select-dark"
                     >
                       <option value="Beginner">Beginner</option>
                       <option value="Intermediate">Intermediate</option>
@@ -190,7 +190,7 @@ export default function PostProjectPage() {
                       required
                       value={formData.duration}
                       onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-3 select-dark"
                     >
                       <option value="1-2 weeks">1-2 weeks</option>
                       <option value="3-4 weeks">3-4 weeks</option>

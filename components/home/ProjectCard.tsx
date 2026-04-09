@@ -38,8 +38,8 @@ export default function ProjectCard({
   return (
     <Link href={projectUrl}>
       <motion.div
-        whileHover={{ y: -8, scale: 1.02 }}
-        className="glass rounded-2xl p-6 h-full cursor-pointer group relative overflow-hidden hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(139,92,246,0.28)] transition-all duration-300"
+        whileHover={{ y: -3, scale: 1.01 }}
+        className="glass rounded-2xl p-6 h-full cursor-pointer group relative overflow-hidden hover:border-violet-500/30 hover:shadow-[0_0_18px_rgba(139,92,246,0.22)] transition-all duration-300"
       >
         {/* Glow effect on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-blue-500/0 group-hover:from-purple-500/10 group-hover:to-blue-500/10 transition-all duration-300" />
