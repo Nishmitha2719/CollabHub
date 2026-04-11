@@ -1,6 +1,3 @@
-'use client';
-
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
 
@@ -13,8 +10,7 @@ interface CardProps {
 
 export default function Card({ children, title, icon, className }: CardProps) {
   return (
-    <motion.div
-      whileHover={{ y: -5 }}
+    <div
       className={cn(
         'glass glass-hover rounded-xl p-6 shadow-[0_10px_30px_rgba(0,0,0,0.3)]',
         className
@@ -29,6 +25,6 @@ export default function Card({ children, title, icon, className }: CardProps) {
       <div className="text-secondary">
         {children}
       </div>
-    </motion.div>
+    </div>
   );
 }

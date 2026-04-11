@@ -110,7 +110,14 @@ export default function BubbleBackground() {
     );
     camera.position.z = 30;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    } catch (error) {
+      console.warn('WebGL not supported, skipping bubble background:', error);
+      return;
+    }
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.setClearAlpha(0);
@@ -120,7 +127,14 @@ export default function BubbleBackground() {
     renderer.domElement.style.display = 'block';
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    container.appendChild(renderer.domElement);
+    
+    try {
+      container.appendChild(renderer.domElement);
+    } catch (error) {
+      console.warn('Failed to append WebGL canvas:', error);
+      renderer.dispose();
+      return;
+    }
 
     scene.fog = new THREE.FogExp2(0x0a0a0f, 0.02);
 

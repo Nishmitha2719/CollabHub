@@ -1,6 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
+import Link from "next/link";
 import { FaHandshake } from "react-icons/fa";
 import { HiRocketLaunch } from "react-icons/hi2";
 import { GiBullseye } from "react-icons/gi";
@@ -49,11 +47,7 @@ export default function AboutPage() {
     <div className="py-20">
       <Container>
         {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-3xl mx-auto mb-20"
-        >
+        <div className="text-center max-w-3xl mx-auto mb-20">
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
             About <span className="text-gradient">CollabHub</span>
           </h1>
@@ -62,15 +56,10 @@ export default function AboutPage() {
             talented individuals with innovative projects. Build, learn, and succeed
             together.
           </p>
-        </motion.div>
+        </div>
 
         {/* Mission Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-20"
-        >
+        <section className="mb-20">
           <div className="glass rounded-3xl p-12 md:p-16 border border-white/10">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
@@ -87,44 +76,28 @@ export default function AboutPage() {
               </p>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* Features Grid */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-20"
-        >
+        <section className="mb-20">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
             Why Choose <span className="text-gradient">CollabHub</span>
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
+              <div key={index}>
                 <Card className="h-full hover:shadow-[0_0_30px_rgba(139,92,246,0.2)] transition-all">
                   <div className="text-5xl mb-4 text-white">{feature.icon}</div>
                   <h3 className="text-xl font-bold mb-3 text-white">{feature.title}</h3>
                   <p className="text-gray-400">{feature.description}</p>
                 </Card>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.section>
+        </section>
 
         {/* CTA Section */}
-        <motion.section
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="text-center"
-        >
+        <section className="text-center">
           <div className="glass rounded-3xl p-12 md:p-16 border border-white/10">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
               Ready to Start Collaborating?
@@ -134,24 +107,19 @@ export default function AboutPage() {
               together. Your next breakthrough is just one connection away.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto px-12"
-                onClick={() => (window.location.href = "/projects")}
-              >
-                Browse Projects
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto px-12"
-                onClick={() => (window.location.href = "/auth/signup")}
-              >
-                Sign Up Free
-              </Button>
+              <Link href="/projects">
+                <Button size="lg" className="w-full sm:w-auto px-12">
+                  Browse Projects
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto px-12">
+                  Sign Up Free
+                </Button>
+              </Link>
             </div>
           </div>
-        </motion.section>
+        </section>
       </Container>
     </div>
   );

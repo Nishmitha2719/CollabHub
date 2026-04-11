@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
+import Loader from '@/components/ui/Loader';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Project, UserProfile } from '@/types/database';
@@ -113,11 +114,7 @@ export default function ProfilePage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
+    return <Loader />;
   }
 
   if (error) {

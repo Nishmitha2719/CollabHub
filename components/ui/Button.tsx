@@ -1,6 +1,3 @@
-'use client';
-
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 
@@ -32,13 +29,11 @@ export default function Button({
   };
 
   return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+    <button
       className={cn(baseStyles, variants[variant], sizes[size], className)}
       {...props}
     >
       {children}
-    </motion.button>
+    </button>
   );
 }

@@ -1,16 +1,20 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/lib/AuthContext';
+import { isUserAdmin } from '@/lib/api/profiles';
 
-export default function Navbar() {
+function Navbar() {
   const pathname = usePathname();
   const { user, signOut, loading } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(false);
 
   const navLinks = [
     { href: '/', label: 'Home', active: pathname === '/' },
@@ -27,6 +31,28 @@ export default function Navbar() {
     await signOut();
   };
 
+  // Check admin status whenever user changes
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user && !loading) {
+        setCheckingAdmin(true);
+        try {
+          const adminStatus = await isUserAdmin(user.id);
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        } finally {
+          setCheckingAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user, loading]);
+
   useEffect(() => {
     const onScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -36,6 +62,10 @@ export default function Navbar() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  if (loading) {
+    return null;
+  }
 
   return (
     <motion.nav
@@ -85,46 +115,60 @@ export default function Navbar() {
                     {link.label}
                   </Link>
                 ))}
+                {isAdmin && !checkingAdmin && (
+                  <Link
+                    href="/admin"
+                    className={`relative pb-1 text-sm font-medium transition-all duration-300 after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-[#fbbf24] after:shadow-[0_0_12px_rgba(251,191,36,0.9)] after:transition-all after:duration-300 hover:after:w-full ${
+                      pathname === '/admin'
+                        ? 'text-[#fbbf24] after:w-full'
+                        : 'text-[#c4c4d8] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    ⚙️ Admin
+                  </Link>
+                )}
               </>
             )}
           </div>
 
           {/* Auth Section */}
-          {!loading && (
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <>
-                  <Link
-                    href={`/profile/${user.id}`}
-                    className="flex items-center space-x-2 text-[#c4c4d8] hover:text-[var(--text-primary)] transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-700 to-indigo-600 shadow-[0_0_14px_rgba(124,58,237,0.45)] flex items-center justify-center text-sm font-semibold">
-                      {user.email?.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="hidden lg:inline">{user.email?.split('@')[0]}</span>
-                  </Link>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                    Logout
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <>
+                <Link
+                  href={`/profile/${user.id}`}
+                  className="flex items-center space-x-2 text-[#c4c4d8] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-700 to-indigo-600 shadow-[0_0_14px_rgba(124,58,237,0.45)] flex items-center justify-center text-sm font-semibold">
+                    {user.email?.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="hidden lg:inline">{user.email?.split('@')[0]}</span>
+                </Link>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="sm">
+                    Sign In
                   </Button>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth/login">
-                    <Button variant="ghost" size="sm">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/auth/signup">
-                    <Button size="sm" className="shadow-[0_0_18px_rgba(124,58,237,0.4)]">
-                      Sign Up
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
-          )}
+                </Link>
+                <Link href="/auth/signup">
+                  <Button size="sm" className="shadow-[0_0_18px_rgba(124,58,237,0.4)]">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </motion.nav>
   );
 }
+
+export default React.memo(Navbar);
+
+

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
+import Loader from '@/components/ui/Loader';
 import { createProject, getAllSkills } from '@/lib/api/projects';
 import { useAuth } from '@/lib/AuthContext';
 import { Skill, CreateProjectData } from '@/types/database';
@@ -41,11 +42,7 @@ export default function PostProjectPage() {
   }, [user, authLoading, router]);
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
+    return <Loader />;
   }
 
   const loadSkills = async () => {
@@ -63,7 +60,27 @@ export default function PostProjectPage() {
 
     setLoading(true);
     try {
-      const project = await createProject(formData, user.id);
+      const project = await createProject(
+        {
+          title: formData.title,
+          description: formData.description,
+          detailed_description: formData.detailed_description,
+          difficulty: formData.difficulty,
+          duration: formData.duration,
+          team_size: formData.team_size,
+          is_paid: formData.is_paid,
+          budget: formData.budget,
+          deadline: formData.deadline,
+          category: formData.category,
+          owner_id: user.id,
+        },
+        formData.skills
+      );
+
+      if (!project) {
+        throw new Error('Failed to create project');
+      }
+
       alert('Project posted successfully!');
       router.push(`/projects/${project.id}`);
     } catch (error) {

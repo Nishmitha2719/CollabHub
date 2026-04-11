@@ -1,5 +1,3 @@
-'use client';
-
 export default function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const sizes = {
     sm: 'h-6 w-6 border-2',

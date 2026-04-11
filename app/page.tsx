@@ -1,10 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
-import BubbleBackground from '@/src/components/BubbleBackground';
 import ProjectCard from '@/components/home/ProjectCard';
 import CategoryCard from '@/components/home/CategoryCard';
 import SuccessStoryCard from '@/components/home/SuccessStoryCard';
@@ -15,6 +15,10 @@ import { ImMobile } from "react-icons/im";
 import { GiCrossedChains } from "react-icons/gi";
 import { PiLockKeyOpenFill } from "react-icons/pi";
 import { IoLocation } from "react-icons/io5";
+
+const BubbleBackground = dynamic(() => import('@/src/components/BubbleBackground'), {
+  ssr: false,
+});
 
 export default function Home() {
   // Sample data - replace with real data from API/database
@@ -139,12 +143,7 @@ export default function Home() {
       {/* Featured Projects */}
       <section className="py-20 relative">
         <Container>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
+          <div>
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Featured <span className="text-gradient">Projects</span>
@@ -156,29 +155,19 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProjects.map((project, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                >
+                <div key={index}>
                   <ProjectCard {...project} />
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
 
       {/* Personalized Recommendations */}
       <section className="py-20 relative">
         <Container>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <div>
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Personalized for <span className="text-gradient">You</span>
@@ -190,29 +179,19 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {featuredProjects.slice(0, 2).map((project, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.2 }}
-                >
+                <div key={index}>
                   <ProjectCard {...project} />
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
 
       {/* Categories Grid */}
       <section className="py-20 relative">
         <Container>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <div>
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Explore <span className="text-gradient">Categories</span>
@@ -224,29 +203,19 @@ export default function Home() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {categories.map((category, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05 }}
-                >
+                <div key={index}>
                   <CategoryCard {...category} />
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
 
       {/* Success Stories */}
       <section className="py-20 relative">
         <Container>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <div>
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Success <span className="text-gradient">Stories</span>
@@ -258,29 +227,19 @@ export default function Home() {
 
             <div className="grid md:grid-cols-3 gap-8">
               {successStories.map((story, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.15 }}
-                >
+                <div key={index}>
                   <SuccessStoryCard {...story} />
-                </motion.div>
+                </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
 
       {/* Local Discovery */}
       <section className="py-20 relative">
         <Container>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <div>
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Projects <span className="text-gradient">Near You</span>
@@ -303,19 +262,14 @@ export default function Home() {
                 Enable Location
               </Button>
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
 
       {/* CTA Section */}
       <section className="py-32 relative">
         <Container>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="glass rounded-3xl p-12 md:p-16 text-center relative overflow-hidden"
-          >
+          <div className="glass rounded-3xl p-12 md:p-16 text-center relative overflow-hidden">
             <div className="relative z-10">
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
                 Ready to Start Building?
@@ -337,7 +291,7 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
       </div>

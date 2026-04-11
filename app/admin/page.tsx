@@ -5,48 +5,78 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { getAllProjects, approveProject, rejectProject, deleteProject } from '@/lib/api/projects';
 import { isUserAdmin } from '@/lib/api/profiles';
+import { useToast, ToastContainer } from '@/components/ui/Toast';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { ProjectWithSkills } from '@/lib/api/projects';
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { toasts, addToast, removeToast } = useToast();
   const [projects, setProjects] = useState<ProjectWithSkills[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function checkAdminAndFetch() {
-      if (authLoading) return;
+      if (authLoading) {
+        return;
+      }
+
+      console.log('User:', user);
+
       if (!user) {
-        router.push('/auth/login?redirect=/admin');
+        if (!cancelled) {
+          router.push('/auth/login?redirectTo=/admin');
+        }
         return;
       }
 
       const adminStatus = await isUserAdmin(user.id);
+      console.log('Admin status:', adminStatus);
+
       if (!adminStatus) {
-        alert('Access denied. Admin only.');
-        router.push('/');
+        if (!cancelled) {
+          setAccessDenied(true);
+          setLoading(false);
+        }
         return;
       }
 
-      setIsAdmin(true);
-      const allProjects = await getAllProjects();
-      setProjects(allProjects);
-      setLoading(false);
+      const allProjects = await getAllProjects(200);
+
+      if (!cancelled) {
+        setIsAdmin(true);
+        setProjects(allProjects);
+        setLoading(false);
+      }
     }
 
     checkAdminAndFetch();
-  }, [user, authLoading, router]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   const handleApprove = async (projectId: string) => {
     setActionLoading(projectId);
     const success = await approveProject(projectId);
     if (success) {
       setProjects(projects.map(p => p.id === projectId ? { ...p, status: 'approved' as const } : p));
-      alert('Project approved!');
+      addToast({
+        message: 'Project approved successfully!',
+        type: 'success',
+      });
     } else {
-      alert('Failed to approve project');
+      addToast({
+        message: 'Failed to approve project. Please try again.',
+        type: 'error',
+      });
     }
     setActionLoading(null);
   };
@@ -56,9 +86,15 @@ export default function AdminDashboard() {
     const success = await rejectProject(projectId);
     if (success) {
       setProjects(projects.map(p => p.id === projectId ? { ...p, status: 'rejected' as const } : p));
-      alert('Project rejected');
+      addToast({
+        message: 'Project rejected successfully.',
+        type: 'success',
+      });
     } else {
-      alert('Failed to reject project');
+      addToast({
+        message: 'Failed to reject project. Please try again.',
+        type: 'error',
+      });
     }
     setActionLoading(null);
   };
@@ -69,17 +105,46 @@ export default function AdminDashboard() {
     const success = await deleteProject(projectId);
     if (success) {
       setProjects(projects.filter(p => p.id !== projectId));
-      alert('Project deleted');
+      addToast({
+        message: 'Project deleted successfully.',
+        type: 'success',
+      });
     } else {
-      alert('Failed to delete project');
+      addToast({
+        message: 'Failed to delete project. Please try again.',
+        type: 'error',
+      });
     }
     setActionLoading(null);
   };
 
+  // Loading state
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-xl">Loading admin dashboard...</div>
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-white text-lg mt-6">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Access denied state
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center px-6">
+        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-12 max-w-md text-center">
+          <div className="text-6xl mb-6">🔒</div>
+          <h1 className="text-3xl font-bold text-white mb-3">Access Denied</h1>
+          <p className="text-gray-400 mb-8">You don't have permission to access the admin dashboard. Only administrators can view this page.</p>
+          <button
+            onClick={() => router.push('/')}
+            className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 transition-all duration-300"
+          >
+            Return to Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -101,15 +166,15 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-purple-500/30 transition-colors">
             <div className="text-yellow-400 text-3xl font-bold">{pendingProjects.length}</div>
             <div className="text-gray-400 mt-1">Pending Review</div>
           </div>
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-green-500/30 transition-colors">
             <div className="text-green-400 text-3xl font-bold">{approvedProjects.length}</div>
             <div className="text-gray-400 mt-1">Approved</div>
           </div>
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-red-500/30 transition-colors">
             <div className="text-red-400 text-3xl font-bold">{rejectedProjects.length}</div>
             <div className="text-gray-400 mt-1">Rejected</div>
           </div>
@@ -134,7 +199,7 @@ export default function AdminDashboard() {
           <h2 className="text-2xl font-bold mb-6">All Projects ({projects.length})</h2>
           <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             <table className="w-full">
-              <thead className="bg-white/5">
+              <thead className="bg-white/5 border-b border-white/10">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Title</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">Owner</th>
@@ -151,7 +216,11 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 text-sm text-gray-400">{project.category}</td>
                     <td className="px-6 py-4 text-sm"><StatusBadge status={project.status} /></td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleDelete(project.id)} disabled={actionLoading === project.id} className="text-red-400 hover:text-red-300 text-sm font-medium disabled:opacity-50">
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        disabled={actionLoading === project.id}
+                        className="text-red-400 hover:text-red-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
                         {actionLoading === project.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </td>
@@ -162,6 +231,8 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }
@@ -175,9 +246,9 @@ function ProjectCard({ project, onApprove, onReject, onDelete, actionLoading }: 
           <h3 className="text-xl font-bold mb-2">{project.title}</h3>
           <p className="text-gray-400 text-sm mb-3">{project.description}</p>
           <div className="flex gap-4 text-sm text-gray-500">
-            <span> {project.category}</span>
-            <span> {project.team_size}</span>
-            <span> {project.duration}</span>
+            <span>📁 {project.category}</span>
+            <span>👥 {project.team_size}</span>
+            <span>⏱️ {project.duration}</span>
           </div>
         </div>
         <StatusBadge status={project.status} />
@@ -185,19 +256,31 @@ function ProjectCard({ project, onApprove, onReject, onDelete, actionLoading }: 
       {project.skills?.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {project.skills.map((skill: string, i: number) => (
-            <span key={i} className="skill-pill text-xs px-3 py-1">{skill}</span>
+            <span key={i} className="skill-pill text-xs px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full">{skill}</span>
           ))}
         </div>
       )}
       <div className="flex gap-3 pt-4 border-t border-white/10">
-        <button onClick={() => onApprove(project.id)} disabled={isLoading || project.status === 'approved'} className="flex-1 px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg transition disabled:opacity-50">
+        <button
+          onClick={() => onApprove(project.id)}
+          disabled={isLoading || project.status === 'approved'}
+          className="flex-1 px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
           {isLoading ? 'Processing...' : '✓ Approve'}
         </button>
-        <button onClick={() => onReject(project.id)} disabled={isLoading || project.status === 'rejected'} className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition disabled:opacity-50">
+        <button
+          onClick={() => onReject(project.id)}
+          disabled={isLoading || project.status === 'rejected'}
+          className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
           {isLoading ? 'Processing...' : '✗ Reject'}
         </button>
-        <button onClick={() => onDelete(project.id)} disabled={isLoading} className="px-4 py-2 bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 rounded-lg transition disabled:opacity-50">
-          Delete
+        <button
+          onClick={() => onDelete(project.id)}
+          disabled={isLoading}
+          className="px-4 py-2 bg-gray-500/20 hover:bg-gray-500/30 text-gray-300 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
+          {isLoading ? '...' : 'Delete'}
         </button>
       </div>
     </div>

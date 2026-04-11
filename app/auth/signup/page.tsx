@@ -1,20 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
-import { FaGoogle } from "react-icons/fa";
-import { FaGithub } from "react-icons/fa";
+import { FaGoogle, FaGithub } from "react-icons/fa";
 
 export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signUp, signInWithGoogle, signInWithGithub } = useAuth();
   const redirectToParam = searchParams.get('redirectTo');
+  const authErrorParam = searchParams.get('error');
   const redirectTo =
     redirectToParam && redirectToParam.startsWith('/') && !redirectToParam.startsWith('//')
       ? redirectToParam
@@ -28,6 +28,12 @@ export default function SignupPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (authErrorParam) {
+      setError(decodeURIComponent(authErrorParam));
+    }
+  }, [authErrorParam]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -56,6 +62,18 @@ export default function SignupPage() {
     } else {
       router.push(redirectTo);
     }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    const { error: oauthError } = await signInWithGoogle(redirectTo);
+    if (oauthError) setError(oauthError.message);
+  };
+
+  const handleGithubSignIn = async () => {
+    setError('');
+    const { error: oauthError } = await signInWithGithub(redirectTo);
+    if (oauthError) setError(oauthError.message);
   };
 
   return (
@@ -149,13 +167,13 @@ export default function SignupPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <button
-                onClick={async () => await signInWithGoogle(redirectTo)}
+                onClick={handleGoogleSignIn}
                 className="flex items-center justify-center px-4 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition"
               >
                 <span className="mr-2"><FaGoogle /></span> Google
               </button>
               <button
-                onClick={async () => await signInWithGithub(redirectTo)}
+                onClick={handleGithubSignIn}
                 className="flex items-center justify-center px-4 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition"
               >
                 <span className="mr-2"><FaGithub /></span> GitHub

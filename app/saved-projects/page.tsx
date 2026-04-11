@@ -1,55 +1,71 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import ProjectCard from '@/components/home/ProjectCard';
 import { getSavedProjects } from '@/lib/api/projects';
 import { useAuth } from '@/lib/AuthContext';
-import { SavedProject } from '@/types/database';
+import Loader from '@/components/ui/Loader';
+import type { ProjectWithSkills } from '@/lib/api/projects';
 
 export default function SavedProjectsPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [savedProjects, setSavedProjects] = useState<ProjectWithSkills[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const loadSavedProjects = useCallback(async () => {
-    if (!user) return;
-    try {
-      const data = await getSavedProjects(user.id);
-      setSavedProjects(data);
-    } catch (error) {
-      console.error('Error loading saved projects:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const loadedForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
+      setLoading(false);
       router.push('/auth/login?redirectTo=/saved-projects');
       return;
     }
-    loadSavedProjects();
-  }, [user, router, loadSavedProjects]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
+    if (loadedForUserRef.current === user.id && savedProjects.length > 0) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    const loadSavedProjects = async () => {
+      setLoading(true);
+      try {
+        const data = await getSavedProjects(user.id, 20);
+        if (!mounted) return;
+        setSavedProjects(data || []);
+        loadedForUserRef.current = user.id;
+      } catch (error) {
+        if (!mounted) return;
+        console.error('Error loading saved projects:', error);
+        setSavedProjects([]);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSavedProjects();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user, authLoading, router, savedProjects.length]);
+
+  if (authLoading || loading) {
+    return <Loader />;
   }
 
   return (
     <div className="py-12">
       <Container>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <div>
           <h1 className="text-4xl font-bold mb-2">
             Saved <span className="text-gradient">Projects</span>
           </h1>
@@ -69,28 +85,22 @@ export default function SavedProjectsPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {savedProjects.map((saved, index) => (
-                <motion.div
-                  key={saved.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  {saved.project && (
-                    <ProjectCard
-                      title={saved.project.title}
-                      description={saved.project.description}
-                      skills={saved.project.skills?.map(s => s.name) || []}
-                      category={saved.project.category}
-                      teamSize={saved.project.team_size}
-                      applicants={0}
-                    />
-                  )}
-                </motion.div>
+              {savedProjects.map((project) => (
+                <div key={project.id}>
+                  <ProjectCard
+                    id={project.id}
+                    title={project.title}
+                    description={project.description}
+                    skills={project.skills || []}
+                    category={project.category}
+                    teamSize={project.team_size}
+                    applicants={0}
+                  />
+                </div>
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
       </Container>
     </div>
   );

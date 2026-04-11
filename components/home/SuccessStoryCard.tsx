@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from 'framer-motion';
 import { FaRegStar } from "react-icons/fa";
 
 interface SuccessStoryCardProps {
@@ -19,10 +16,7 @@ export default function SuccessStoryCard({
   imageUrl,
 }: SuccessStoryCardProps) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      className="glass rounded-2xl overflow-hidden"
-    >
+    <div className="glass rounded-2xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
       {imageUrl && (
         <div className="relative h-48 bg-gradient-to-br from-purple-500/20 to-blue-500/20">
           <div className="absolute inset-0 flex items-center justify-center text-6xl">
@@ -65,6 +59,6 @@ export default function SuccessStoryCard({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

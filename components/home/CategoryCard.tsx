@@ -1,7 +1,4 @@
-'use client';
-
 import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 
 interface CategoryCardProps {
@@ -19,11 +16,7 @@ export default function CategoryCard({
 }: CategoryCardProps) {
   return (
     <Link href={`/projects?category=${title.toLowerCase()}`}>
-      <motion.div
-        whileHover={{ y: -5, scale: 1.05 }}
-        whileTap={{ scale: 0.98 }}
-        className="glass p-6 cursor-pointer group relative overflow-hidden flex flex-col items-center justify-center text-center min-h-[160px]"
-      >
+      <div className="glass p-6 cursor-pointer group relative overflow-hidden flex flex-col items-center justify-center text-center min-h-[160px] hover:-translate-y-1 hover:scale-[1.02] transition-transform duration-300">
         <div
           className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity`}
         />
@@ -33,7 +26,7 @@ export default function CategoryCard({
           <h3 className="text-lg font-bold mb-2">{title}</h3>
           <p className="text-sm text-secondary">{projectCount} projects</p>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 }

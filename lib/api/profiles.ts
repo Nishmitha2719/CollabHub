@@ -74,6 +74,8 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
  * Check if user is admin
  */
 export async function isUserAdmin(userId: string): Promise<boolean> {
+  console.log('Checking admin for:', userId);
+
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -81,7 +83,17 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
       .eq('id', userId)
       .single();
 
-    if (error) throw error;
+    console.log('Profile data:', data);
+
+    if (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+
+    if (!data) {
+      return false;
+    }
+
     return data?.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);

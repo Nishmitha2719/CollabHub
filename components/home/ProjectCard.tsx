@@ -1,6 +1,4 @@
-'use client';
-
-import { motion } from 'framer-motion';
+import React from 'react';
 import Link from 'next/link';
 
 interface ProjectCardProps {
@@ -14,7 +12,7 @@ interface ProjectCardProps {
   applicants: number;
 }
 
-export default function ProjectCard({
+function ProjectCard({
   id,
   title,
   description,
@@ -24,8 +22,8 @@ export default function ProjectCard({
   teamSize,
   applicants,
 }: ProjectCardProps) {
-  // Use id if available, otherwise fallback to slug from title
-  const projectUrl = id ? `/projects/${id}` : `/projects/${title.toLowerCase().replace(/ /g, '-')}`;
+  // Only link to detail when we have a real project UUID.
+  const projectUrl = id ? `/projects/${id}` : '/projects';
 
   const getSkillColorClass = (skill: string) => {
     const key = skill.toLowerCase();
@@ -37,10 +35,7 @@ export default function ProjectCard({
   
   return (
     <Link href={projectUrl}>
-      <motion.div
-        whileHover={{ y: -3, scale: 1.01 }}
-        className="glass rounded-2xl p-6 h-full cursor-pointer group relative overflow-hidden hover:border-violet-500/30 hover:shadow-[0_0_18px_rgba(139,92,246,0.22)] transition-all duration-300"
-      >
+      <div className="glass rounded-2xl p-6 h-full cursor-pointer group relative overflow-hidden hover:-translate-y-0.5 hover:border-violet-500/30 hover:shadow-[0_0_18px_rgba(139,92,246,0.22)] transition-all duration-300">
         {/* Glow effect on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-blue-500/0 group-hover:from-purple-500/10 group-hover:to-blue-500/10 transition-all duration-300" />
         
@@ -93,7 +88,9 @@ export default function ProjectCard({
             <span>📝 {applicants} applied</span>
           </div>
         </div>
-      </motion.div>
+      </div>
     </Link>
   );
 }
+
+export default React.memo(ProjectCard);

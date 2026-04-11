@@ -1,14 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
-import { FaGoogle } from "react-icons/fa";
-import { FaGithub } from "react-icons/fa";
+import { FaGoogle, FaGithub } from "react-icons/fa";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,10 +19,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const redirectToParam = searchParams.get('redirectTo');
+  const authErrorParam = searchParams.get('error');
   const redirectTo =
     redirectToParam && redirectToParam.startsWith('/') && !redirectToParam.startsWith('//')
       ? redirectToParam
       : '/';
+
+  useEffect(() => {
+    if (authErrorParam) {
+      setError(decodeURIComponent(authErrorParam));
+    }
+  }, [authErrorParam]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

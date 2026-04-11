@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
+import Loader from '@/components/ui/Loader';
 import { useAuth } from '@/lib/AuthContext';
-import { applyToProject, saveProject } from '@/lib/api/projects';
+import { applyToProject, getProjectById, saveProject, type ProjectWithSkills } from '@/lib/api/projects';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -16,6 +17,7 @@ export default function ProjectDetailPage() {
   const [applying, setApplying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
+  const [project, setProject] = useState<ProjectWithSkills | null>(null);
   
   const getSkillColorClass = (skill: string) => {
     const key = skill.toLowerCase();
@@ -25,42 +27,38 @@ export default function ProjectDetailPage() {
     return 'skill-pill-blue';
   };
   
-  // Mock project data
-  const mockProject = {
-    id: params.id,
-    title: 'AI-Powered Study Assistant',
-    description: 'Build an intelligent study companion using GPT-4 and React. Help students learn more effectively with personalized recommendations.',
-    detailed_description: `We're building an AI-powered study assistant that helps students learn more effectively. The app will use GPT-4 to provide personalized learning recommendations, generate practice questions, and explain complex concepts in simple terms.
-
-Key Features:
-- Personalized study plans based on learning style
-- AI-generated practice questions and quizzes
-- Concept explanations with examples
-- Progress tracking and analytics
-- Integration with popular learning platforms
-
-Tech Stack:
-- Frontend: React, TypeScript, Tailwind CSS
-- Backend: FastAPI, Python
-- AI: OpenAI GPT-4 API
-- Database: PostgreSQL`,
-    category: 'AI/ML',
-    difficulty: 'Intermediate',
-    duration: '2-3 months',
-    team_size: 4,
-    is_paid: false,
-    skills: ['React', 'Python', 'OpenAI API', 'FastAPI', 'PostgreSQL'],
-    roles: [
-      { name: 'Frontend Developer', description: 'Build responsive UI with React', positions: 2 },
-      { name: 'Backend Developer', description: 'Develop API with FastAPI', positions: 1 },
-      { name: 'ML Engineer', description: 'Integrate GPT-4 and optimize prompts', positions: 1 },
-    ],
-  };
-
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    let mounted = true;
+
+    const loadProject = async () => {
+      setLoading(true);
+      setNotice('');
+      try {
+        const projectId = String(params.id);
+        const data = await getProjectById(projectId);
+        if (!mounted) return;
+
+        if (!data) {
+          setNotice('Project not found or unavailable.');
+          setProject(null);
+        } else {
+          setProject(data);
+        }
+      } catch (error) {
+        if (!mounted) return;
+        setNotice('Unable to load project details.');
+        setProject(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadProject();
+
+    return () => {
+      mounted = false;
+    };
+  }, [params.id]);
 
   const handleApply = async () => {
     if (!user) {
@@ -71,8 +69,9 @@ Tech Stack:
     setApplying(true);
     setNotice('');
     try {
-      await applyToProject(String(params.id), user.id);
-      setNotice('Application submitted successfully.');
+      const projectId = String(params.id);
+      const success = await applyToProject(user.id, projectId);
+      setNotice(success ? 'Application submitted successfully.' : 'Could not submit application. Please try again.');
     } catch (error: any) {
       // Handle duplicate apply or other backend errors without a mock message.
       setNotice(error?.message || 'Could not submit application. Please try again.');
@@ -90,8 +89,9 @@ Tech Stack:
     setSaving(true);
     setNotice('');
     try {
-      await saveProject(String(params.id), user.id);
-      setNotice('Project saved.');
+      const projectId = String(params.id);
+      const success = await saveProject(user.id, projectId);
+      setNotice(success ? 'Project saved.' : 'Could not save project.');
     } catch (error: any) {
       setNotice(error?.message || 'Could not save project.');
     } finally {
@@ -100,9 +100,18 @@ Tech Stack:
   };
 
   if (loading) {
+    return <Loader />;
+  }
+
+  if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="py-12">
+        <Container>
+          <div className="glass rounded-2xl p-8 border border-white/10 text-center">
+            <p className="text-gray-300 mb-4">{notice || 'Project not found.'}</p>
+            <Button onClick={() => router.push('/projects')}>Back to Browse</Button>
+          </div>
+        </Container>
       </div>
     );
   }
@@ -118,21 +127,21 @@ Tech Stack:
           <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">{mockProject.title}</h1>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4">{project.title}</h1>
                 <div className="flex flex-wrap gap-4 text-sm text-gray-400">
                   <span className="flex items-center gap-2">
-                    📁 <span>{mockProject.category}</span>
+                    📁 <span>{project.category}</span>
                   </span>
                   <span className="flex items-center gap-2">
-                    📊 <span>{mockProject.difficulty}</span>
+                    📊 <span>{project.difficulty}</span>
                   </span>
                   <span className="flex items-center gap-2">
-                    ⏱️ <span>{mockProject.duration}</span>
+                    ⏱️ <span>{project.duration}</span>
                   </span>
                   <span className="flex items-center gap-2">
-                    👥 <span>{mockProject.team_size} members needed</span>
+                    👥 <span>{project.team_size} members needed</span>
                   </span>
-                  {mockProject.is_paid && (
+                  {project.is_paid && (
                     <span className="flex items-center gap-2 text-green-400">
                       💰 <span>Paid Project</span>
                     </span>
@@ -160,7 +169,7 @@ Tech Stack:
             <div className="mb-6">
               <h2 className="text-2xl font-bold mb-4">Description</h2>
               <p className="text-gray-400 text-lg leading-relaxed whitespace-pre-line">
-                {mockProject.detailed_description}
+                {project.detailed_description || project.description}
               </p>
             </div>
 
@@ -168,7 +177,7 @@ Tech Stack:
             <div>
               <h2 className="text-2xl font-bold mb-4">Required Skills</h2>
               <div className="flex flex-wrap gap-3">
-                {mockProject.skills.map((skill, index) => (
+                {(project.skills || []).map((skill, index) => (
                   <span
                     key={index}
                     className={`skill-pill text-sm font-medium px-4 py-2 ${getSkillColorClass(skill)}`}
@@ -177,22 +186,6 @@ Tech Stack:
                   </span>
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Roles Needed */}
-          <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
-            <h2 className="text-2xl font-bold mb-6">Roles Needed</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              {mockProject.roles.map((role, index) => (
-                <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                  <h3 className="text-xl font-bold mb-2">{role.name}</h3>
-                  <p className="text-gray-400 mb-4">{role.description}</p>
-                  <div className="text-sm text-purple-400 font-semibold">
-                    {role.positions} {role.positions === 1 ? 'position' : 'positions'} available
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 

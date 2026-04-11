@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 interface AuthContextType {
@@ -19,46 +20,63 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const getInitialSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        setSession(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
 
       // Auto-create profile on signup
       if (event === 'SIGNED_IN' && session?.user) {
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
+        void (async () => {
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
 
-        if (!existingProfile) {
-          await supabase.from('profiles').insert([{
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-            role: 'user'
-          }]);
-        }
+          if (!existingProfile) {
+            await supabase.from('profiles').insert([
+              {
+                id: session.user.id,
+                email: session.user.email!,
+                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                role: 'user',
+              },
+            ]);
+          }
+        })();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, metadata?: any) => {
@@ -112,7 +130,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } finally {
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+
+      if (typeof window !== 'undefined') {
+        const keysToRemove = Object.keys(localStorage).filter(
+          (key) => key.includes('supabase.auth.token') || key.includes('-auth-token')
+        );
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+        const sessionKeysToRemove = Object.keys(sessionStorage).filter(
+          (key) => key.includes('supabase.auth.token') || key.includes('-auth-token')
+        );
+        sessionKeysToRemove.forEach((key) => sessionStorage.removeItem(key));
+      }
+
+      router.replace('/auth/login');
+    }
   };
 
   const resetPassword = async (email: string) => {
