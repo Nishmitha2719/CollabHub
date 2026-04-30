@@ -14,6 +14,8 @@ export default function PostProjectPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateProjectData>({
     title: '',
@@ -58,9 +60,29 @@ export default function PostProjectPage() {
     e.preventDefault();
     if (!user) return;
 
+    setError('');
+    setSuccess('');
     setLoading(true);
+
     try {
-      const project = await createProject(
+      // Validate required fields
+      if (!formData.title.trim()) {
+        setError('Project title is required');
+        setLoading(false);
+        return;
+      }
+      if (!formData.description.trim()) {
+        setError('Short description is required');
+        setLoading(false);
+        return;
+      }
+      if (formData.skills.length === 0) {
+        setError('Please select at least one skill');
+        setLoading(false);
+        return;
+      }
+
+      const result = await createProject(
         {
           title: formData.title,
           description: formData.description,
@@ -77,15 +99,22 @@ export default function PostProjectPage() {
         formData.skills
       );
 
-      if (!project) {
-        throw new Error('Failed to create project');
+      if (!result.success) {
+        setError(result.error || 'Failed to create project. Please try again.');
+        console.error('Project creation failed:', result.error);
+        return;
       }
 
-      alert('Project posted successfully!');
-      router.push(`/projects/${project.id}`);
+      setSuccess('✓ Project posted successfully! Your project is now pending admin approval.');
+      console.log('Project created:', result.data?.id);
+      
+      setTimeout(() => {
+        router.push(`/projects/${result.data?.id}`);
+      }, 2000);
     } catch (error) {
-      alert('Error posting project');
-      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      console.error('Error posting project:', error);
     } finally {
       setLoading(false);
     }
@@ -127,6 +156,19 @@ export default function PostProjectPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Error Message */}
+            {error && (
+              <div className="glass rounded-2xl p-4 border border-red-500/50 bg-red-500/10">
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div className="glass rounded-2xl p-4 border border-green-500/50 bg-green-500/10">
+                <p className="text-green-300 text-sm">{success}</p>
+              </div>
+            )}
             {/* Basic Info */}
             <div className="glass rounded-2xl p-8 border border-white/10">
               <h2 className="text-2xl font-bold mb-6">Basic Information</h2>

@@ -138,35 +138,56 @@ export async function getProjects(filters?: ProjectFilters, limit = 10): Promise
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const buildQuery = (selectShape: string) => {
-      let query = supabase
-        .from('projects')
-        .select(selectShape)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
-        .range(from, to);
+    // Fetch approved projects first (simple query, no FK join)
+    let query = supabase
+      .from('projects')
+      .select('*')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
-      if (filters?.category) query = query.eq('category', filters.category);
-      if (filters?.difficulty) query = query.eq('difficulty', filters.difficulty);
-      if (filters?.duration) query = query.eq('duration', filters.duration);
-      if (filters?.team_size) query = query.eq('team_size', filters.team_size);
-      if (filters?.is_paid !== undefined) query = query.eq('is_paid', filters.is_paid);
-      if (filters?.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    if (filters?.category) query = query.eq('category', filters.category);
+    if (filters?.difficulty) query = query.eq('difficulty', filters.difficulty);
+    if (filters?.duration) query = query.eq('duration', filters.duration);
+    if (filters?.team_size) query = query.eq('team_size', filters.team_size);
+    if (filters?.is_paid !== undefined) query = query.eq('is_paid', filters.is_paid);
+    if (filters?.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
 
-      return query;
-    };
+    const { data: projectsData, error: projectsError } = await query;
 
-    let { data, error } = await buildQuery(`*, project_skills (skill_id, skills (name))`);
+    if (projectsError) throw projectsError;
 
-    if (error?.code === '42703') {
-      ({ data, error } = await buildQuery(`*, project_skills (skill_name)`));
+    if (!projectsData || projectsData.length === 0) {
+      return [];
     }
 
-    if (error) throw error;
+    const projectIds = projectsData.map((p: any) => p.id);
 
-    return (data || []).map((project: any) => ({
+    // Fetch skills separately
+    const { data: skillsData, error: skillsError } = await supabase
+      .from('project_skills')
+      .select('project_id, skills(name)')
+      .in('project_id', projectIds);
+
+    if (skillsError && skillsError.code !== 'PGRST116') {
+      console.error('Error fetching skills:', skillsError);
+    }
+
+    // Create skills map
+    const skillsMap = new Map();
+    (skillsData || []).forEach((item: any) => {
+      if (!skillsMap.has(item.project_id)) {
+        skillsMap.set(item.project_id, []);
+      }
+      const skillName = item.skills?.name || item.skills?.skill_name || item.skill_name;
+      if (skillName) {
+        skillsMap.get(item.project_id).push(skillName);
+      }
+    });
+
+    return (projectsData || []).map((project: any) => ({
       ...project,
-      skills: normalizeSkillsFromProject(project)
+      skills: skillsMap.get(project.id) || []
     }));
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -179,27 +200,46 @@ export async function getProjectById(id: string): Promise<ProjectWithSkills | nu
   try {
     validateUuid(id, 'projectId');
 
-    let { data, error } = await supabase
+    // Fetch project
+    const { data: projectData, error: projectError } = await supabase
       .from('projects')
-      .select(`*, project_skills (skill_id, skills (name)), profiles!projects_owner_id_fkey (name, email, avatar_url)`)
+      .select('*')
       .eq('id', id)
       .single();
 
-    if (error?.code === '42703') {
-      ({ data, error } = await supabase
-        .from('projects')
-        .select(`*, project_skills (skill_name), profiles!projects_owner_id_fkey (name, email, avatar_url)`)
-        .eq('id', id)
-        .single());
+    if (projectError) throw projectError;
+    if (!projectData) return null;
+
+    // Fetch owner profile
+    const { data: ownerData, error: ownerError } = await supabase
+      .from('profiles')
+      .select('id, name, email, avatar_url')
+      .eq('id', projectData.owner_id)
+      .single();
+
+    if (ownerError && ownerError.code !== 'PGRST116') {
+      console.error('Error fetching owner profile:', ownerError);
     }
 
-    if (error) throw error;
-    if (!data) return null;
+    // Fetch skills
+    const { data: skillsData, error: skillsError } = await supabase
+      .from('project_skills')
+      .select('project_id, skills(name)')
+      .eq('project_id', id);
+
+    if (skillsError && skillsError.code !== 'PGRST116') {
+      console.error('Error fetching skills:', skillsError);
+    }
+
+    // Extract skill names
+    const skills = (skillsData || []).map((item: any) => {
+      return item.skills?.name || item.skills?.skill_name || item.skill_name;
+    }).filter(Boolean);
 
     return {
-      ...data,
-      skills: normalizeSkillsFromProject(data),
-      owner: data.profiles
+      ...projectData,
+      skills,
+      owner: ownerData || { name: 'Unknown', email: '', avatar_url: null }
     };
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -208,8 +248,22 @@ export async function getProjectById(id: string): Promise<ProjectWithSkills | nu
 }
 
 // Create project
-export async function createProject(project: Partial<Project>, skills: string[] = []): Promise<ProjectWithSkills | null> {
+export async function createProject(project: Partial<Project>, skills: string[] = []): Promise<{ success: boolean; data?: ProjectWithSkills; error?: string }> {
   try {
+    // Validate required fields
+    if (!project.title?.trim()) {
+      return { success: false, error: 'Project title is required' };
+    }
+    if (!project.description?.trim()) {
+      return { success: false, error: 'Project description is required' };
+    }
+    if (!project.owner_id) {
+      return { success: false, error: 'User ID is required' };
+    }
+    if (!project.category?.trim()) {
+      return { success: false, error: 'Category is required' };
+    }
+
     const { id: _ignoredId, ...projectPayload } = project;
 
     const insertPayload = {
@@ -217,9 +271,9 @@ export async function createProject(project: Partial<Project>, skills: string[] 
       description: projectPayload.description,
       detailed_description: projectPayload.detailed_description || null,
       category: projectPayload.category,
-      difficulty: projectPayload.difficulty,
-      duration: projectPayload.duration,
-      team_size: projectPayload.team_size,
+      difficulty: projectPayload.difficulty || 'Intermediate',
+      duration: projectPayload.duration || '1-2 months',
+      team_size: projectPayload.team_size || 3,
       is_paid: projectPayload.is_paid ?? false,
       budget: projectPayload.budget || null,
       deadline: projectPayload.deadline || null,
@@ -233,16 +287,37 @@ export async function createProject(project: Partial<Project>, skills: string[] 
       .select()
       .single();
 
-    if (projectError) throw projectError;
-
-    if (skills.length > 0 && projectData) {
-      await insertProjectSkills(projectData.id, skills);
+    if (projectError) {
+      const errorMessage = projectError.message || 'Failed to insert project into database';
+      console.error('Project insert error:', {
+        message: projectError.message,
+        code: projectError.code,
+        details: projectError.details,
+        hint: projectError.hint,
+      });
+      return { success: false, error: errorMessage };
     }
 
-    return { ...projectData, skills };
+    if (!projectData) {
+      return { success: false, error: 'Project was not created (no data returned)' };
+    }
+
+    // Insert skills (non-blocking - don't fail if this fails)
+    if (skills.length > 0) {
+      try {
+        await insertProjectSkills(projectData.id, skills);
+      } catch (skillError) {
+        console.warn('Error inserting skills (non-blocking):', skillError);
+        // Don't fail the entire request
+      }
+    }
+
+    console.log('Project created successfully:', projectData.id);
+    return { success: true, data: { ...projectData, skills } };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     console.error('Error creating project:', error);
-    return null;
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -350,30 +425,143 @@ export async function hasUserApplied(userId: string, projectId: string): Promise
 // ADMIN: Get all projects
 export async function getAllProjects(limit = 20): Promise<ProjectWithSkills[]> {
   try {
-    let { data, error } = await supabase
+    console.log('Fetching all projects with limit:', limit);
+
+    // First, fetch all projects
+    let { data: projectsData, error: projectsError } = await supabase
       .from('projects')
-      .select(`*, project_skills (skill_id, skills (name)), profiles!projects_owner_id_fkey (name, email)`)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error?.code === '42703') {
-      ({ data, error } = await supabase
-        .from('projects')
-        .select(`*, project_skills (skill_name), profiles!projects_owner_id_fkey (name, email)`)
-        .order('created_at', { ascending: false })
-        .limit(limit));
+    if (projectsError) {
+      console.error('Error fetching all projects:', projectsError);
+      throw projectsError;
     }
 
-    if (error) throw error;
+    console.log(`Found ${projectsData?.length || 0} total projects`);
 
-    return (data || []).map((project: any) => ({
+    // Then fetch owner profiles separately
+    const projectIds = (projectsData || []).map((p: any) => p.owner_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .in('id', projectIds);
+
+    if (profilesError) {
+      console.error('Error fetching owner profiles:', profilesError);
+      // Don't throw - continue without profile data
+    }
+
+    // Create lookup map for profiles
+    const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+
+    // Now fetch skills for these projects
+    const { data: skillsData, error: skillsError } = await supabase
+      .from('project_skills')
+      .select('project_id, skills(name)')
+      .in('project_id', projectIds);
+
+    if (skillsError && skillsError.code !== 'PGRST116') {
+      console.error('Error fetching project skills:', skillsError);
+      // Don't throw - continue without skills
+    }
+
+    // Create lookup map for skills
+    const skillsMap = new Map();
+    (skillsData || []).forEach((item: any) => {
+      if (!skillsMap.has(item.project_id)) {
+        skillsMap.set(item.project_id, []);
+      }
+      const skillName = item.skills?.name || item.skills?.skill_name || item.skill_name;
+      if (skillName) {
+        skillsMap.get(item.project_id).push(skillName);
+      }
+    });
+
+    // Combine results
+    return (projectsData || []).map((project: any) => ({
       ...project,
-      skills: normalizeSkillsFromProject(project),
-      owner: project.profiles
+      skills: skillsMap.get(project.id) || [],
+      owner: profilesMap.get(project.owner_id) || { name: 'Unknown', email: 'unknown@example.com' }
     }));
   } catch (error) {
     console.error('Error fetching all projects:', error);
     return [];
+  }
+}
+
+// ADMIN: Get pending projects (for admin dashboard)
+export async function getPendingProjects(limit = 20): Promise<ProjectWithSkills[]> {
+  try {
+    console.log('Fetching pending projects with limit:', limit);
+
+    // First, try with project_skills join
+    let { data: projectsData, error: projectsError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (projectsError) {
+      console.error('Error fetching pending projects:', {
+        message: projectsError.message,
+        code: projectsError.code,
+        details: projectsError.details,
+      });
+      throw projectsError;
+    }
+
+    console.log(`Found ${projectsData?.length || 0} pending projects`);
+
+    // Then fetch owner profiles separately
+    const projectIds = (projectsData || []).map((p: any) => p.owner_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .in('id', projectIds);
+
+    if (profilesError) {
+      console.error('Error fetching owner profiles:', profilesError);
+      // Don't throw - continue without profile data
+    }
+
+    // Create lookup map for profiles
+    const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+
+    // Now fetch skills for these projects
+    const { data: skillsData, error: skillsError } = await supabase
+      .from('project_skills')
+      .select('project_id, skills(name)')
+      .in('project_id', projectIds);
+
+    if (skillsError && skillsError.code !== 'PGRST116') {
+      console.error('Error fetching project skills:', skillsError);
+      // Don't throw - continue without skills
+    }
+
+    // Create lookup map for skills
+    const skillsMap = new Map();
+    (skillsData || []).forEach((item: any) => {
+      if (!skillsMap.has(item.project_id)) {
+        skillsMap.set(item.project_id, []);
+      }
+      const skillName = item.skills?.name || item.skills?.skill_name || item.skill_name;
+      if (skillName) {
+        skillsMap.get(item.project_id).push(skillName);
+      }
+    });
+
+    // Combine results
+    return (projectsData || []).map((project: any) => ({
+      ...project,
+      skills: skillsMap.get(project.id) || [],
+      owner: profilesMap.get(project.owner_id) || { name: 'Unknown', email: 'unknown@example.com' }
+    }));
+  } catch (error) {
+    console.error('Error in getPendingProjects:', error);
+    throw error; // Don't silent fail - admin needs to know
   }
 }
 

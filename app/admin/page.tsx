@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
-import { getAllProjects, approveProject, rejectProject, deleteProject } from '@/lib/api/projects';
+import { getAllProjects, getPendingProjects, approveProject, rejectProject, deleteProject } from '@/lib/api/projects';
 import { isUserAdmin } from '@/lib/api/profiles';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -14,10 +14,12 @@ export default function AdminDashboard() {
   const router = useRouter();
   const { toasts, addToast, removeToast } = useToast();
   const [projects, setProjects] = useState<ProjectWithSkills[]>([]);
+  const [pendingProjects, setPendingProjects] = useState<ProjectWithSkills[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,12 +49,22 @@ export default function AdminDashboard() {
         return;
       }
 
-      const allProjects = await getAllProjects(200);
+      try {
+        const pending = await getPendingProjects(200);
+        const all = await getAllProjects(200);
 
-      if (!cancelled) {
-        setIsAdmin(true);
-        setProjects(allProjects);
-        setLoading(false);
+        if (!cancelled) {
+          setIsAdmin(true);
+          setPendingProjects(pending);
+          setProjects(all);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load projects');
+          setLoading(false);
+        }
       }
     }
 
@@ -130,6 +142,25 @@ export default function AdminDashboard() {
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center px-6">
+        <div className="backdrop-blur-xl bg-red-500/10 border border-red-500/30 rounded-3xl p-12 max-w-md text-center">
+          <div className="text-6xl mb-6">⚠️</div>
+          <h1 className="text-3xl font-bold text-red-400 mb-3">Error Loading Dashboard</h1>
+          <p className="text-gray-400 mb-8">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 transition-all duration-300"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Access denied state
   if (accessDenied) {
     return (
@@ -151,7 +182,6 @@ export default function AdminDashboard() {
 
   if (!isAdmin) return null;
 
-  const pendingProjects = projects.filter(p => p.status === 'pending');
   const approvedProjects = projects.filter(p => p.status === 'approved');
   const rejectedProjects = projects.filter(p => p.status === 'rejected');
 
@@ -166,7 +196,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-purple-500/30 transition-colors">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-yellow-500/30 transition-colors">
             <div className="text-yellow-400 text-3xl font-bold">{pendingProjects.length}</div>
             <div className="text-gray-400 mt-1">Pending Review</div>
           </div>

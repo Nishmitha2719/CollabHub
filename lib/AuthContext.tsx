@@ -54,21 +54,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Auto-create profile on signup
       if (event === 'SIGNED_IN' && session?.user) {
         void (async () => {
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', session.user.id)
-            .single();
+          try {
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', session.user.id)
+              .single();
 
-          if (!existingProfile) {
-            await supabase.from('profiles').insert([
-              {
-                id: session.user.id,
-                email: session.user.email!,
-                name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-                role: 'user',
-              },
-            ]);
+            if (!existingProfile) {
+              const { error: insertError } = await supabase.from('profiles').insert([
+                {
+                  id: session.user.id,
+                  email: session.user.email!,
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                  role: 'user',
+                },
+              ]);
+
+              if (insertError) {
+                console.error('Failed to create profile on SIGNED_IN:', insertError);
+              }
+            }
+          } catch (error) {
+            console.error('Error in SIGNED_IN profile creation:', error);
           }
         })();
       }
@@ -80,33 +88,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, metadata?: any) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+        },
+      });
 
-    // Create profile immediately after signup
-    if (data.user && !error) {
-      await supabase.from('profiles').insert([{
-        id: data.user.id,
-        email: data.user.email!,
-        name: metadata?.name || email.split('@')[0],
-        role: 'user'
-      }]);
+      if (error) {
+        console.error('Supabase signUp error:', error);
+        return { error };
+      }
+
+      // Create profile immediately after signup
+      if (data.user) {
+        try {
+          const { error: profileError } = await supabase.from('profiles').insert([{
+            id: data.user.id,
+            email: data.user.email!,
+            name: metadata?.name || email.split('@')[0],
+            role: 'user'
+          }]);
+
+          if (profileError) {
+            console.error('Profile creation error:', profileError);
+            // Don't fail signup if profile creation fails - it will be created on auth state change
+          }
+        } catch (profileException) {
+          console.error('Profile creation exception:', profileException);
+          // Don't fail signup if profile creation fails
+        }
+      }
+
+      return { error };
+    } catch (exception) {
+      console.error('SignUp exception:', exception);
+      return { error: { message: exception instanceof Error ? exception.message : 'An unexpected error occurred' } };
     }
-
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Supabase signIn error:', error);
+      }
+
+      return { error };
+    } catch (exception) {
+      console.error('SignIn exception:', exception);
+      return { error: { message: exception instanceof Error ? exception.message : 'An unexpected error occurred' } };
+    }
   };
 
   const signInWithGoogle = async (redirectTo = '/') => {
@@ -154,10 +192,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
-    return { error };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) {
+        console.error('Reset password error:', error);
+      }
+
+      return { error };
+    } catch (exception) {
+      console.error('Reset password exception:', exception);
+      return { error: { message: exception instanceof Error ? exception.message : 'An unexpected error occurred' } };
+    }
   };
 
   return (
