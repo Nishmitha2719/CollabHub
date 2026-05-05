@@ -75,6 +75,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error('Failed to create profile on SIGNED_IN:', insertError);
               }
             }
+
+            // Ensure detailed profile row exists for profile editor page.
+            const { data: existingDetailedProfile, error: checkDetailedError } = await supabase
+              .from('user_profiles')
+              .select('id')
+              .eq('id', session.user.id)
+              .maybeSingle();
+
+            if (checkDetailedError) {
+              console.error('Failed checking user_profiles on SIGNED_IN:', checkDetailedError);
+            }
+
+            if (!existingDetailedProfile) {
+              const { error: insertDetailedError } = await supabase.from('user_profiles').insert([
+                {
+                  id: session.user.id,
+                  full_name:
+                    session.user.user_metadata?.name ||
+                    session.user.email?.split('@')[0] ||
+                    'User',
+                },
+              ]);
+
+              if (insertDetailedError) {
+                console.error('Failed to create user_profiles on SIGNED_IN:', insertDetailedError);
+              }
+            }
           } catch (error) {
             console.error('Error in SIGNED_IN profile creation:', error);
           }
@@ -119,6 +146,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (profileException) {
           console.error('Profile creation exception:', profileException);
           // Don't fail signup if profile creation fails
+        }
+
+        try {
+          const { error: detailedProfileError } = await supabase.from('user_profiles').insert([
+            {
+              id: data.user.id,
+              full_name: metadata?.name || email.split('@')[0],
+            },
+          ]);
+
+          if (detailedProfileError && detailedProfileError.code !== '23505') {
+            console.error('Detailed profile creation error:', detailedProfileError);
+          }
+        } catch (detailedProfileException) {
+          console.error('Detailed profile creation exception:', detailedProfileException);
         }
       }
 

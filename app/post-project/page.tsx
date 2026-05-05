@@ -81,6 +81,14 @@ export default function PostProjectPage() {
         setLoading(false);
         return;
       }
+      const validRoles = formData.roles.filter(
+        (role) => role.role_name.trim().length > 0 && Number(role.positions_available) > 0
+      );
+      if (validRoles.length === 0) {
+        setError('Please add at least one valid role with available positions');
+        setLoading(false);
+        return;
+      }
 
       const result = await createProject(
         {
@@ -96,7 +104,8 @@ export default function PostProjectPage() {
           category: formData.category,
           owner_id: user.id,
         },
-        formData.skills
+        formData.skills,
+        validRoles
       );
 
       if (!result.success) {

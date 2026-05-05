@@ -71,7 +71,7 @@ export interface Application {
   user_id: string;
   role_id?: string;
   message?: string;
-  status: 'Pending' | 'Accepted' | 'Rejected' | 'Withdrawn';
+  status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
   applied_at: string;
   reviewed_at?: string;
   project?: Project;

@@ -91,22 +91,58 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveMessage('');
     try {
+      const now = new Date().toISOString();
       const payload = {
         id: user.id,
         ...editData,
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       };
 
-      const { data, error: upsertError } = await supabase
+      // Prefer UPDATE first to avoid RLS failures from implicit INSERT in upsert.
+      const { data: updatedData, error: updateError } = await supabase
         .from('user_profiles')
-        .upsert(payload, { onConflict: 'id' })
+        .update(payload)
+        .eq('id', user.id)
+        .select('*')
+        .maybeSingle();
+
+      if (updateError) {
+        console.error('Error updating user profile:', updateError);
+        throw updateError;
+      }
+
+      if (updatedData) {
+        setProfile(updatedData as UserProfile);
+        setSaveMessage('Profile updated successfully.');
+        return;
+      }
+
+      // If no row existed, create one.
+      const { data: insertedData, error: insertError } = await supabase
+        .from('user_profiles')
+        .insert([
+          {
+            ...payload,
+            created_at: now,
+          },
+        ])
         .select('*')
         .single();
 
-      if (upsertError) throw upsertError;
-      setProfile(data as UserProfile);
+      if (insertError) {
+        console.error('Error inserting user profile:', insertError);
+        if (insertError.message?.toLowerCase().includes('row-level security')) {
+          throw new Error(
+            'Profile save is blocked by Supabase RLS policy for user_profiles. Run the profile RLS fix SQL and try again.'
+          );
+        }
+        throw insertError;
+      }
+
+      setProfile(insertedData as UserProfile);
       setSaveMessage('Profile updated successfully.');
     } catch (err: any) {
+      console.error('Unable to save profile:', err);
       setSaveMessage(err?.message || 'Unable to save profile.');
     } finally {
       setSaving(false);
@@ -151,6 +187,38 @@ export default function ProfilePage() {
           <div className="flex flex-wrap gap-3 text-sm text-gray-400">
             {profile.college ? <span>College: {profile.college}</span> : null}
             {profile.location ? <span>Location: {profile.location}</span> : null}
+          </div>
+          <div className="flex flex-wrap gap-3 mt-4">
+            {profile.github_url ? (
+              <a
+                href={profile.github_url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-sm text-purple-300 hover:bg-white/10"
+              >
+                GitHub
+              </a>
+            ) : null}
+            {profile.linkedin_url ? (
+              <a
+                href={profile.linkedin_url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-sm text-purple-300 hover:bg-white/10"
+              >
+                LinkedIn
+              </a>
+            ) : null}
+            {profile.portfolio_url ? (
+              <a
+                href={profile.portfolio_url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-sm text-purple-300 hover:bg-white/10"
+              >
+                Portfolio
+              </a>
+            ) : null}
           </div>
         </div>
 

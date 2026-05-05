@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import type { Skill } from '@/types/database';
+import { createProjectRoles } from './projectRoles';
 
 export interface Project {
   id: string;
@@ -248,7 +249,15 @@ export async function getProjectById(id: string): Promise<ProjectWithSkills | nu
 }
 
 // Create project
-export async function createProject(project: Partial<Project>, skills: string[] = []): Promise<{ success: boolean; data?: ProjectWithSkills; error?: string }> {
+export async function createProject(
+  project: Partial<Project>,
+  skills: string[] = [],
+  roles: Array<{
+    role_name: string;
+    description?: string;
+    positions_available: number;
+  }> = []
+): Promise<{ success: boolean; data?: ProjectWithSkills; error?: string }> {
   try {
     // Validate required fields
     if (!project.title?.trim()) {
@@ -262,6 +271,18 @@ export async function createProject(project: Partial<Project>, skills: string[] 
     }
     if (!project.category?.trim()) {
       return { success: false, error: 'Category is required' };
+    }
+
+    const validRoles = roles
+      .map((role) => ({
+        role_name: role.role_name?.trim() || '',
+        description: role.description?.trim() || '',
+        positions_available: Number(role.positions_available) || 0,
+      }))
+      .filter((role) => role.role_name.length > 0 && role.positions_available > 0);
+
+    if (validRoles.length === 0) {
+      return { success: false, error: 'At least one valid role is required' };
     }
 
     const { id: _ignoredId, ...projectPayload } = project;
@@ -310,6 +331,17 @@ export async function createProject(project: Partial<Project>, skills: string[] 
         console.warn('Error inserting skills (non-blocking):', skillError);
         // Don't fail the entire request
       }
+    }
+
+    const roleResult = await createProjectRoles(projectData.id, validRoles);
+    if (!roleResult.success) {
+      console.error('Error creating project roles:', roleResult.error);
+      return {
+        success: false,
+        error:
+          roleResult.error ||
+          'Project was created but roles failed to save. Please edit the project and add roles again.',
+      };
     }
 
     console.log('Project created successfully:', projectData.id);
@@ -389,25 +421,75 @@ export async function getSavedProjects(userId: string, limit = 10): Promise<Proj
 }
 
 // Apply to project
+
+/**
+ * @deprecated Use applyToProject from lib/api/applications.ts instead (requires roleId)
+ * This function is kept for backwards compatibility but doesn't support roles
+ */
 export async function applyToProject(userId: string, projectId: string, message?: string): Promise<boolean> {
   try {
     validateUuid(userId, 'userId');
     validateUuid(projectId, 'projectId');
 
-    const { error } = await supabase.from('applications').insert([{ user_id: userId, project_id: projectId, message: message || null, status: 'pending' }]);
-    if (error && error.code === '23505') throw new Error('You have already applied to this project');
+    // 🔍 Check for existing application
+    const { data: existing, error: checkError } = await supabase
+      .from('applications')
+      .select('status')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking existing application:', checkError);
+      throw checkError;
+    }
+
+    // ✅ Handle existing application
+    if (existing) {
+      if (existing.status === 'pending' || existing.status === 'accepted') {
+        throw new Error('You have already applied to this project');
+      }
+
+      // Allow re-application if previously rejected/withdrawn
+      if (existing.status === 'rejected' || existing.status === 'withdrawn') {
+        const { error: updateError } = await supabase
+          .from('applications')
+          .update({
+            message: message || null,
+            status: 'pending',
+          })
+          .eq('project_id', projectId)
+          .eq('user_id', userId);
+
+        if (updateError) {
+          console.error('Error re-applying to project:', updateError);
+          throw updateError;
+        }
+        return true;
+      }
+    }
+
+    // Insert new application
+    const { error } = await supabase.from('applications').insert([
+      {
+        user_id: userId,
+        project_id: projectId,
+        message: message || null,
+        status: 'pending',
+      },
+    ]);
+
     if (error) {
-      console.error(error);
-      return false;
+      console.error('Error applying to project:', error);
+      throw error;
     }
 
     return true;
   } catch (error: any) {
-    console.error('Error applying:', error);
+    console.error('Error in applyToProject:', error);
     throw error;
   }
 }
-
 // Check if user applied
 export async function hasUserApplied(userId: string, projectId: string): Promise<boolean> {
   try {
