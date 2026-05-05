@@ -390,19 +390,19 @@ export default function PostProjectPage() {
             </div>
 
             {/* Submit */}
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => router.back()}
-                className="flex-1"
+                onClick={() => router.push('/projects')}
+                className="w-full flex-1 border border-transparent bg-[rgba(26,26,46,0.72)] text-[var(--text-primary)] shadow-[0_6px_18px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:border-[var(--accent)] hover:bg-[rgba(124,58,237,0.14)] hover:shadow-[0_12px_28px_rgba(124,58,237,0.22)]"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="flex-1"
+                className="w-full flex-1"
               >
                 {loading ? 'Posting...' : 'Post Project'}
               </Button>

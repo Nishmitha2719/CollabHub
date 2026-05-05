@@ -3,25 +3,26 @@
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
 import Container from '@/components/ui/Container';
 import ProjectCard from '@/components/home/ProjectCard';
 import CategoryCard from '@/components/home/CategoryCard';
-import SuccessStoryCard from '@/components/home/SuccessStoryCard';
 import { FaRobot } from "react-icons/fa";
 import { GiWorld } from "react-icons/gi";
 import { GiRadioTower } from "react-icons/gi";
 import { ImMobile } from "react-icons/im";
 import { GiCrossedChains } from "react-icons/gi";
 import { PiLockKeyOpenFill } from "react-icons/pi";
-import { IoLocation } from "react-icons/io5";
+import { getProjectCountsByCategory } from '@/lib/api/projects';
 
 const BubbleBackground = dynamic(() => import('@/src/components/BubbleBackground'), {
   ssr: false,
 });
 
 export default function Home() {
-  // Sample data - replace with real data from API/database
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+
   const featuredProjects = [
     {
       title: 'AI-Powered Study Assistant',
@@ -53,34 +54,31 @@ export default function Home() {
   ];
 
   const categories = [
-    { title: 'AI/ML', icon: <FaRobot />, projectCount: 45, gradient: 'from-purple-500 to-pink-500' },
-    { title: 'Web Dev', icon: <GiWorld />, projectCount: 78, gradient: 'from-blue-500 to-cyan-500' },
-    { title: 'IoT', icon: <GiRadioTower />, projectCount: 32, gradient: 'from-green-500 to-teal-500' },
-    { title: 'Mobile', icon: <ImMobile />, projectCount: 56, gradient: 'from-orange-500 to-yellow-500' },
-    { title: 'Blockchain', icon: <GiCrossedChains />, projectCount: 28, gradient: 'from-indigo-500 to-purple-500' },
-    { title: 'Cybersecurity', icon: <PiLockKeyOpenFill />, projectCount: 23, gradient: 'from-red-500 to-pink-500' },
+    { title: 'AI/ML', icon: <FaRobot />, gradient: 'from-purple-500 to-pink-500' },
+    { title: 'Web Dev', icon: <GiWorld />, gradient: 'from-blue-500 to-cyan-500' },
+    { title: 'IoT', icon: <GiRadioTower />, gradient: 'from-green-500 to-teal-500' },
+    { title: 'Mobile', icon: <ImMobile />, gradient: 'from-orange-500 to-yellow-500' },
+    { title: 'Blockchain', icon: <GiCrossedChains />, gradient: 'from-indigo-500 to-purple-500' },
+    { title: 'Cybersecurity', icon: <PiLockKeyOpenFill />, gradient: 'from-red-500 to-pink-500' },
   ];
 
-  const successStories = [
-    {
-      title: 'EcoTrack - Carbon Footprint App',
-      description: 'Won first place at HackMIT 2024. Now used by 10,000+ students.',
-      team: ['Alex', 'Sarah', 'Mike', 'Emma'],
-      rating: 5,
-    },
-    {
-      title: 'MediConnect - Healthcare Platform',
-      description: 'Secured $50K seed funding. Connecting patients with doctors seamlessly.',
-      team: ['John', 'Lisa', 'David'],
-      rating: 5,
-    },
-    {
-      title: 'CodeMentor - Peer Learning',
-      description: 'Featured in TechCrunch. 5000+ active mentors helping students worldwide.',
-      team: ['Priya', 'James', 'Sofia', 'Chen', 'Maya'],
-      rating: 4,
-    },
-  ];
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCounts = async () => {
+      const counts = await getProjectCountsByCategory(categories.map((category) => category.title));
+
+      if (mounted) {
+        setCategoryCounts(counts);
+      }
+    };
+
+    loadCounts();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="relative min-h-screen">
@@ -89,16 +87,16 @@ export default function Home() {
 
       <div className="bubble-content-layer">
         {/* Hero Section */}
-        <section className="relative min-h-[calc(100svh-4rem)] flex items-center justify-center overflow-hidden">
+        <section className="relative min-h-[calc(100svh-4rem)] flex items-center justify-center overflow-hidden py-16 sm:py-20">
           <Container>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center relative z-10"
+            className="relative z-10 mx-auto max-w-4xl px-2 text-center sm:px-0"
           >
             <motion.h1 
-              className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
+              className="mb-6 text-4xl font-bold leading-tight sm:text-5xl md:text-7xl"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -110,7 +108,7 @@ export default function Home() {
             </motion.h1>
             
             <motion.p 
-              className="text-xl md:text-2xl text-secondary mb-12 max-w-3xl mx-auto"
+              className="mx-auto mb-10 max-w-3xl text-lg text-secondary sm:text-xl md:text-2xl"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
@@ -141,11 +139,11 @@ export default function Home() {
       </section>
 
       {/* Featured Projects */}
-      <section className="py-20 relative">
+      <section className="relative py-16 md:py-20">
         <Container>
           <div>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <div className="mb-10 text-center md:mb-12">
+              <h2 className="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
                 Featured <span className="text-gradient">Projects</span>
               </h2>
               <p className="text-secondary text-lg">
@@ -165,11 +163,11 @@ export default function Home() {
       </section>
 
       {/* Personalized Recommendations */}
-      <section className="py-20 relative">
+      <section className="relative py-16 md:py-20">
         <Container>
           <div>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <div className="mb-10 text-center md:mb-12">
+              <h2 className="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
                 Personalized for <span className="text-gradient">You</span>
               </h2>
               <p className="text-secondary text-lg">
@@ -189,11 +187,11 @@ export default function Home() {
       </section>
 
       {/* Categories Grid */}
-      <section className="py-20 relative">
+      <section className="relative min-h-[100svh] flex items-center py-20 md:py-24">
         <Container>
           <div>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <div className="mb-12 text-center md:mb-16">
+              <h2 className="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">
                 Explore <span className="text-gradient">Categories</span>
               </h2>
               <p className="text-secondary text-lg">
@@ -204,77 +202,23 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {categories.map((category, index) => (
                 <div key={index}>
-                  <CategoryCard {...category} />
+                  <CategoryCard {...category} projectCount={categoryCounts[category.title] ?? 0} />
                 </div>
               ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* Success Stories */}
-      <section className="py-20 relative">
-        <Container>
-          <div>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Success <span className="text-gradient">Stories</span>
-              </h2>
-              <p className="text-secondary text-lg">
-                See what amazing teams have built on CollabHub
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {successStories.map((story, index) => (
-                <div key={index}>
-                  <SuccessStoryCard {...story} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* Local Discovery */}
-      <section className="py-20 relative">
-        <Container>
-          <div>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                Projects <span className="text-gradient">Near You</span>
-              </h2>
-              <p className="text-secondary text-lg">
-                Connect with students from your college and city
-              </p>
-            </div>
-
-            <div className="glass rounded-2xl p-8 md:p-12 text-center max-w-2xl mx-auto flex flex-col items-center justify-center gap-6">
-              <IoLocation className="text-4xl text-accent" />
-              <h3 className="text-2xl font-bold mb-4">
-                Enable Location to See Local Projects
-              </h3>
-              <p className="text-secondary mb-8">
-                Discover projects from students at your university and nearby colleges.
-                Meet your team in person and collaborate effectively.
-              </p>
-              <Button size="lg">
-                Enable Location
-              </Button>
             </div>
           </div>
         </Container>
       </section>
 
       {/* CTA Section */}
-      <section className="py-32 relative">
+      <section className="relative py-16 md:py-24">
         <Container>
-          <div className="glass rounded-3xl p-12 md:p-16 text-center relative overflow-hidden">
+          <div className="glass relative overflow-hidden rounded-3xl p-8 text-center sm:p-10 md:p-16">
             <div className="relative z-10">
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <h2 className="mb-6 text-3xl font-bold sm:text-4xl md:text-5xl">
                 Ready to Start Building?
               </h2>
-              <p className="text-xl text-secondary mb-10 max-w-2xl mx-auto">
+              <p className="mx-auto mb-8 max-w-2xl text-lg text-secondary sm:text-xl md:mb-10">
                 Join thousands of students creating the future. Post your project
                 or find your dream team today.
               </p>

@@ -63,19 +63,19 @@ export default function SavedProjectsPage() {
   }
 
   return (
-    <div className="py-12">
+    <div className="py-14 pb-20 sm:py-16 sm:pb-24 lg:py-20 lg:pb-28">
       <Container>
-        <div>
-          <h1 className="text-4xl font-bold mb-2">
+        <div className="mx-auto max-w-7xl">
+          <h1 className="mb-3 text-4xl font-bold md:text-5xl">
             Saved <span className="text-gradient">Projects</span>
           </h1>
-          <p className="text-gray-400 mb-8">
+          <p className="mb-10 max-w-2xl text-gray-400 sm:mb-12">
             Projects you&apos;ve bookmarked for later
           </p>
 
           {savedProjects.length === 0 ? (
-            <div className="glass rounded-2xl p-12 text-center border border-white/10">
-              <p className="text-gray-400 mb-4">No saved projects yet</p>
+            <div className="glass rounded-2xl border border-white/10 p-10 text-center sm:p-12">
+              <p className="mb-4 text-gray-400">No saved projects yet</p>
               <button
                 onClick={() => router.push('/projects')}
                 className="text-purple-400 hover:text-purple-300"
@@ -84,7 +84,7 @@ export default function SavedProjectsPage() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-10">
               {savedProjects.map((project) => (
                 <div key={project.id}>
                   <ProjectCard

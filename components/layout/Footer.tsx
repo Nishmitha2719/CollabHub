@@ -2,15 +2,15 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="glass border-t border-[var(--border)] mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="glass border-t border-[var(--border)]">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-4 md:gap-8 lg:gap-12">
           {/* Brand */}
-          <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-bold text-gradient mb-4">
+          <div className="md:col-span-2">
+            <h3 className="mb-4 text-2xl font-bold text-gradient">
               CollabHub
             </h3>
-            <p className="text-secondary mb-4">
+            <p className="mb-4 max-w-xl text-secondary leading-relaxed">
               A modern collaboration platform built with Next.js and Supabase.
               Empowering teams to work better together.
             </p>
@@ -21,8 +21,8 @@ export default function Footer() {
 
           {/* Product Links */}
           <div>
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-2">
+            <h4 className="mb-4 text-base font-semibold">Product</h4>
+            <ul className="space-y-2 text-sm sm:text-base">
               <li>
                 <Link href="/projects" className="text-secondary hover:text-white transition-colors">
                   Browse Projects
@@ -43,8 +43,8 @@ export default function Footer() {
 
           {/* Company Links */}
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2">
+            <h4 className="mb-4 text-base font-semibold">Company</h4>
+            <ul className="space-y-2 text-sm sm:text-base">
               <li>
                 <Link href="/about" className="text-secondary hover:text-white transition-colors">
                   About

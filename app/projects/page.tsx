@@ -1,4 +1,3 @@
-import { revalidatePath } from 'next/cache';
 import Container from '@/components/ui/Container';
 import ProjectCard from '@/components/home/ProjectCard';
 import { getProjects } from '@/lib/api/projects';
@@ -9,13 +8,13 @@ export default async function ProjectsPage() {
   const projects = await getProjects(undefined, 20);
 
   return (
-    <div className="py-12">
+    <div className="py-14 sm:py-16 lg:py-20">
       <Container>
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-2">
+        <div className="mx-auto max-w-7xl">
+          <h1 className="mb-3 text-4xl font-bold md:text-5xl">
             Browse <span className="text-gradient">Projects</span>
           </h1>
-          <p className="text-gray-400 mb-12 text-lg">
+          <p className="mb-10 max-w-2xl text-lg text-gray-400 sm:mb-12">
             Discover exciting projects and find your next collaboration
           </p>
 
@@ -24,7 +23,7 @@ export default async function ProjectsPage() {
               No approved projects found yet.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-10">
               {projects.map((project) => (
                 <div key={project.id}>
                   <ProjectCard

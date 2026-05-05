@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
@@ -9,9 +10,16 @@ import Loader from '@/components/ui/Loader';
 import { useAuth } from '@/lib/AuthContext';
 import { getProjectById, saveProject, type ProjectWithSkills } from '@/lib/api/projects';
 import { createProjectRoles, getProjectRoles, type ProjectRole } from '@/lib/api/projectRoles';
-import ApplyModal from '@/components/projects/ApplyModal';
-import ApplicationsReview from '@/components/projects/ApplicationsReview';
 import { useToast } from '@/components/ui/Toast';
+
+const ApplyModal = dynamic(() => import('@/components/projects/ApplyModal'), {
+  ssr: false,
+});
+
+const ApplicationsReview = dynamic(() => import('@/components/projects/ApplicationsReview'), {
+  ssr: false,
+  loading: () => <div className="glass rounded-2xl p-6 border border-white/10 text-center text-gray-400">Loading applications...</div>,
+});
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -30,6 +38,7 @@ export default function ProjectDetailPage() {
   const [notice, setNotice] = useState('');
   const [project, setProject] = useState<ProjectWithSkills | null>(null);
   const { addToast } = useToast();
+  const projectId = Array.isArray(params.id) ? params.id[0] : String(params.id || '');
   
   const getSkillColorClass = (skill: string) => {
     const key = skill.toLowerCase();
@@ -43,10 +52,17 @@ export default function ProjectDetailPage() {
     let mounted = true;
 
     const loadProject = async () => {
+      if (!projectId) {
+        if (mounted) {
+          setNotice('Project not found or unavailable.');
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
       setNotice('');
       try {
-        const projectId = String(params.id);
         const data = await getProjectById(projectId);
         if (!mounted) return;
 
@@ -70,18 +86,34 @@ export default function ProjectDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [params.id]);
+  }, [projectId]);
 
   useEffect(() => {
     let mounted = true;
 
     const loadRoles = async () => {
+      if (!projectId) {
+        if (mounted) {
+          setRoles([]);
+          setRolesLoading(false);
+        }
+        return;
+      }
+
       setRolesLoading(true);
-      const projectId = String(params.id);
-      const projectRoles = await getProjectRoles(projectId);
-      if (mounted) {
-        setRoles(projectRoles);
-        setRolesLoading(false);
+      try {
+        const projectRoles = await getProjectRoles(projectId);
+        if (mounted) {
+          setRoles(projectRoles);
+        }
+      } catch {
+        if (mounted) {
+          setRoles([]);
+        }
+      } finally {
+        if (mounted) {
+          setRolesLoading(false);
+        }
       }
     };
 
@@ -90,7 +122,7 @@ export default function ProjectDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [params.id]);
+  }, [projectId]);
 
   const availableRoles = roles.filter(
     (role) => Number(role.positions_filled) < Number(role.positions_available)
@@ -99,7 +131,7 @@ export default function ProjectDetailPage() {
   const isOwner = user?.id === project?.owner_id;
 
   const refreshProjectData = async () => {
-    const projectId = String(params.id);
+    if (!projectId) return;
     const [projectData, projectRoles] = await Promise.all([
       getProjectById(projectId),
       getProjectRoles(projectId),
@@ -110,7 +142,7 @@ export default function ProjectDetailPage() {
 
   const handleApplyClick = async () => {
     if (!user) {
-      router.push('/auth/login?redirectTo=/projects/' + params.id);
+      router.push('/auth/login?redirectTo=/projects/' + projectId);
       return;
     }
 
@@ -128,14 +160,13 @@ export default function ProjectDetailPage() {
 
   const handleSave = async () => {
     if (!user) {
-      router.push('/auth/login?redirectTo=/projects/' + params.id);
+      router.push('/auth/login?redirectTo=/projects/' + projectId);
       return;
     }
 
     setSaving(true);
     setNotice('');
     try {
-      const projectId = String(params.id);
       const success = await saveProject(user.id, projectId);
       setNotice(success ? 'Project saved.' : 'Could not save project.');
     } catch (error: any) {
@@ -206,18 +237,18 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="py-12">
+    <div className="py-8 sm:py-10 lg:py-12">
       <Container>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           {/* Header */}
-          <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">{project.title}</h1>
-                <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+          <div className="glass rounded-2xl p-5 sm:p-6 lg:p-8 border border-white/10 mb-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between mb-6">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 break-words">{project.title}</h1>
+                <div className="flex flex-wrap gap-3 sm:gap-4 text-sm text-gray-400">
                   <span className="flex items-center gap-2">
                     📁 <span>{project.category}</span>
                   </span>
@@ -237,15 +268,15 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:shrink-0">
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-6 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition-all font-semibold"
+                  className="w-full px-6 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition-all font-semibold sm:w-auto"
                 >
                   {saving ? 'Saving...' : '🤍 Save'}
                 </button>
-                <Button onClick={handleApplyClick} disabled={rolesLoading || isTeamFull}>
+                <Button onClick={handleApplyClick} disabled={rolesLoading || isTeamFull} className="w-full sm:w-auto">
                   {rolesLoading ? 'Checking Roles...' : isTeamFull ? 'Team is Full' : 'Apply Now'}
                 </Button>
               </div>
@@ -280,7 +311,7 @@ export default function ProjectDetailPage() {
             {roles.length > 0 && (
               <div className="mt-8">
                 <h2 className="text-2xl font-bold mb-4">Open Roles</h2>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   {roles.map((role) => {
                     const available = Number(role.positions_available) - Number(role.positions_filled);
                     const full = available <= 0;
@@ -303,26 +334,28 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Apply CTA */}
-          <div className="glass rounded-2xl p-12 border border-white/10 text-center">
-            <h2 className="text-3xl font-bold mb-4">Interested in Joining?</h2>
-            <p className="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">
+          <div className="glass rounded-2xl p-6 sm:p-8 lg:p-12 border border-white/10 text-center mt-8 sm:mt-10">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4">Interested in Joining?</h2>
+            <p className="text-gray-400 text-base sm:text-lg mb-8 max-w-2xl mx-auto">
               Apply now to be part of this exciting project. We&apos;ll review your application and get back to you soon!
             </p>
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col gap-4 justify-center sm:flex-row">
               <Button
                 onClick={handleApplyClick}
                 size="lg"
-                className="px-12"
+                className="w-full px-12 sm:w-auto"
                 disabled={rolesLoading || isTeamFull}
               >
                 {rolesLoading ? 'Checking Roles...' : isTeamFull ? 'Team is Full' : 'Apply Now'}
               </Button>
-              <button
+              <Button
                 onClick={() => router.push('/projects')}
-                className="px-12 py-4 glass border-2 border-white/10 text-white font-semibold rounded-lg hover:bg-white/5 transition-all"
+                size="lg"
+                variant="outline"
+                className="w-full px-12 sm:w-auto"
               >
                 Back to Browse
-              </button>
+              </Button>
             </div>
           </div>
         </motion.div>
@@ -341,7 +374,7 @@ export default function ProjectDetailPage() {
 
         {project && isOwner && (
           <>
-            <div className="mt-10 glass rounded-2xl p-8 border border-white/10">
+            <div className="mt-10 glass rounded-2xl p-5 sm:p-6 lg:p-8 border border-white/10">
               <h2 className="text-2xl font-bold mb-4">Manage Roles</h2>
               <p className="text-gray-400 text-sm mb-6">
                 Add roles to this project so applicants can choose a role while applying.
@@ -354,7 +387,7 @@ export default function ProjectDetailPage() {
                 }}
                 className="space-y-4"
               >
-                <div className="grid md:grid-cols-[1fr_140px] gap-4">
+                <div className="grid gap-4 md:grid-cols-[1fr_140px]">
                   <input
                     type="text"
                     value={newRoleName}
@@ -383,6 +416,7 @@ export default function ProjectDetailPage() {
                   type="button"
                   onClick={() => void handleAddRole()}
                   disabled={addingRole}
+                  className="w-full sm:w-auto"
                 >
                   {addingRole ? 'Adding Role...' : 'Add Role'}
                 </Button>
