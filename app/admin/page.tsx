@@ -73,13 +73,14 @@ export default function AdminDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, router]);
 
   const handleApprove = async (projectId: string) => {
     setActionLoading(projectId);
     const success = await approveProject(projectId);
     if (success) {
       setProjects(projects.map(p => p.id === projectId ? { ...p, status: 'approved' as const } : p));
+      setPendingProjects(pendingProjects.filter(p => p.id !== projectId));
       addToast({
         message: 'Project approved successfully!',
         type: 'success',
@@ -98,6 +99,7 @@ export default function AdminDashboard() {
     const success = await rejectProject(projectId);
     if (success) {
       setProjects(projects.map(p => p.id === projectId ? { ...p, status: 'rejected' as const } : p));
+      setPendingProjects(pendingProjects.filter(p => p.id !== projectId));
       addToast({
         message: 'Project rejected successfully.',
         type: 'success',
@@ -168,7 +170,7 @@ export default function AdminDashboard() {
         <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-12 max-w-md text-center">
           <div className="text-6xl mb-6">🔒</div>
           <h1 className="text-3xl font-bold text-white mb-3">Access Denied</h1>
-          <p className="text-gray-400 mb-8">You don't have permission to access the admin dashboard. Only administrators can view this page.</p>
+          <p className="text-gray-400 mb-8">You don&apos;t have permission to access the admin dashboard. Only administrators can view this page.</p>
           <button
             onClick={() => router.push('/')}
             className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 transition-all duration-300"

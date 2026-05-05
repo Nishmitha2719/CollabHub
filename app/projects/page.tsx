@@ -1,6 +1,9 @@
+import { revalidatePath } from 'next/cache';
 import Container from '@/components/ui/Container';
 import ProjectCard from '@/components/home/ProjectCard';
 import { getProjects } from '@/lib/api/projects';
+
+export const revalidate = 0;
 
 export default async function ProjectsPage() {
   const projects = await getProjects(undefined, 20);
