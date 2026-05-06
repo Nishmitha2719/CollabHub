@@ -3,28 +3,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/lib/AuthContext';
 import { isUserAdmin } from '@/lib/api/profiles';
 
 function Navbar() {
-  const pathname = usePathname();
   const { user, signOut, loading } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(false);
 
   const navLinks = [
-    { href: '/', label: 'Home', active: pathname === '/' },
-    { href: '/projects', label: 'Browse', active: pathname === '/browse' || pathname === '/projects' },
-    { href: '/about', label: 'About', active: pathname === '/about' },
+    { href: '/', label: 'Home' },
+    { href: '/projects', label: 'Browse' },
+    { href: '/about', label: 'About' },
   ];
 
   const memberLinks = [
-    { href: '/saved', label: 'Saved', active: pathname === '/saved' || pathname === '/saved-projects' },
-    { href: '/post-project', label: 'Post Project', active: pathname === '/post-project' },
+    { href: '/saved', label: 'Saved' },
+    { href: '/post-project', label: 'Post Project' },
   ];
 
   const handleSignOut = async () => {
@@ -92,9 +90,7 @@ function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`relative pb-1 text-sm font-medium transition-all duration-300 after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-[var(--accent)] after:shadow-[0_0_12px_rgba(124,58,237,0.9)] after:transition-all after:duration-300 hover:after:w-full ${
-                  link.active
-                    ? 'text-[var(--accent)] after:w-full'
-                    : 'text-[#c4c4d8] hover:text-[var(--text-primary)]'
+                  'text-[#c4c4d8] hover:text-[var(--text-primary)]'
                 }`}
               >
                 {link.label}
@@ -107,9 +103,7 @@ function Navbar() {
                     key={link.href}
                     href={link.href}
                     className={`relative pb-1 text-sm font-medium transition-all duration-300 after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-[var(--accent)] after:shadow-[0_0_12px_rgba(124,58,237,0.9)] after:transition-all after:duration-300 hover:after:w-full ${
-                      link.active
-                        ? 'text-[var(--accent)] after:w-full'
-                        : 'text-[#c4c4d8] hover:text-[var(--text-primary)]'
+                      'text-[#c4c4d8] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     {link.label}
@@ -119,9 +113,7 @@ function Navbar() {
                   <Link
                     href="/admin"
                     className={`relative pb-1 text-sm font-medium transition-all duration-300 after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-[#fbbf24] after:shadow-[0_0_12px_rgba(251,191,36,0.9)] after:transition-all after:duration-300 hover:after:w-full ${
-                      pathname === '/admin'
-                        ? 'text-[#fbbf24] after:w-full'
-                        : 'text-[#c4c4d8] hover:text-[var(--text-primary)]'
+                      'text-[#c4c4d8] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     ⚙️ Admin

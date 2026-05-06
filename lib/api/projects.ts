@@ -196,6 +196,35 @@ export async function getProjects(filters?: ProjectFilters, limit = 10): Promise
   }
 }
 
+export async function getProjectCountsByCategory(categories: string[]): Promise<Record<string, number>> {
+  try {
+    const counts = await Promise.all(
+      categories.map(async (category) => {
+        const { count, error } = await supabase
+          .from('projects')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'approved')
+          .eq('category', category);
+
+        if (error) {
+          console.error(`Error fetching project count for ${category}:`, error);
+          return [category, 0] as const;
+        }
+
+        return [category, count ?? 0] as const;
+      })
+    );
+
+    return Object.fromEntries(counts);
+  } catch (error) {
+    console.error('Error fetching project counts by category:', error);
+    return categories.reduce<Record<string, number>>((accumulator, category) => {
+      accumulator[category] = 0;
+      return accumulator;
+    }, {});
+  }
+}
+
 // Get project by ID
 export async function getProjectById(id: string): Promise<ProjectWithSkills | null> {
   try {
