@@ -28,6 +28,7 @@ export default function SignupPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   useEffect(() => {
     if (authErrorParam) {
@@ -54,10 +55,14 @@ export default function SignupPage() {
     }
 
     setLoading(true);
-    const { error } = await signUp(formData.email, formData.password, { name: formData.name });
+    const { error, needsConfirmation } = await signUp(formData.email, formData.password, { name: formData.name });
 
     if (error) {
       setError(error.message);
+      setLoading(false);
+    } else if (needsConfirmation) {
+      // Not signed in yet: the user has to click the link in the email first.
+      setConfirmationSent(true);
       setLoading(false);
     } else {
       router.push(redirectTo);
@@ -76,6 +81,31 @@ export default function SignupPage() {
     if (oauthError) setError(oauthError.message);
   };
 
+  if (confirmationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-12 px-4">
+        <Container>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-md mx-auto"
+          >
+            <div className="glass rounded-2xl p-8 border border-white/10 text-center space-y-4">
+              <div className="text-5xl">✉️</div>
+              <h1 className="text-2xl font-bold">Check your email</h1>
+              <p className="text-gray-400">
+                We&apos;ve sent a confirmation link to {formData.email}. Click it to activate your account, then sign in.
+              </p>
+              <Link href={`/auth/login?redirectTo=${encodeURIComponent(redirectTo)}`}>
+                <Button className="w-full mt-4">Go to Sign In</Button>
+              </Link>
+            </div>
+          </motion.div>
+        </Container>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <Container>
@@ -88,7 +118,7 @@ export default function SignupPage() {
             <h1 className="text-4xl font-bold mb-2">
               Create <span className="text-gradient">Account</span>
             </h1>
-            <p className="text-gray-400">Join CollabHub today</p>
+            <p className="text-blue-200">Join CollabHub tomorrow</p>
           </div>
 
           <div className="glass rounded-2xl p-8 border border-white/10">

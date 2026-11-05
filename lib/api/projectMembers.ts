@@ -25,32 +25,46 @@ export async function getProjectMembers(
   try {
     const { data, error } = await supabase
       .from('project_members')
-      .select(
-        `
-        id,
-        project_id,
-        user_id,
-        role,
-        joined_at,
-        status,
-        user:user_id (
-          id,
-          full_name,
-          email,
-          avatar_url
-        )
-      `
-      )
+      .select('id, project_id, user_id, role, joined_at, status')
       .eq('project_id', projectId)
-      .eq('status', 'Active')
+      .in('status', ['Active', 'active'])
       .order('joined_at', { ascending: false });
 
     if (error) throw error;
 
-    return (data || []).map((member: any) => ({
-      ...member,
-      user: member.user,
-    }));
+    const rows: any[] = data || [];
+    const userIds = Array.from(new Set(rows.map((member) => member.user_id))).filter(Boolean);
+
+    // Member names live in `profiles` (column `name`), so look them up separately.
+    const profilesById = new Map<string, any>();
+    if (userIds.length > 0) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching member profiles:', profilesError);
+      }
+
+      (profiles || []).forEach((profile: any) => profilesById.set(profile.id, profile));
+    }
+
+    return rows.map((member) => {
+      const profile = profilesById.get(member.user_id);
+      return {
+        ...member,
+        user: profile
+          ? {
+              id: profile.id,
+              full_name: profile.name ?? undefined,
+              name: profile.name ?? undefined,
+              email: profile.email ?? undefined,
+              avatar_url: profile.avatar_url ?? undefined,
+            }
+          : undefined,
+      };
+    });
   } catch (error) {
     console.error('Error fetching project members:', error);
     return [];

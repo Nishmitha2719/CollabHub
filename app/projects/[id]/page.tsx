@@ -7,14 +7,32 @@ import { useParams, useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/ui/Loader';
+import TeamRoster from '@/components/projects/TeamRoster';
+import ProgressTracker from '@/components/projects/ProgressTracker';
+import GitHubRepoCard from '@/components/projects/GitHubRepoCard';
+import { isActiveProjectMember } from '@/lib/api/membership';
 import { useAuth } from '@/lib/AuthContext';
-import { getProjectById, saveProject, type ProjectWithSkills } from '@/lib/api/projects';
+import {
+  getProjectById,
+  isProjectSaved,
+  saveProject,
+  unsaveProject,
+  type ProjectWithSkills,
+} from '@/lib/api/projects';
 import { createProjectRoles, getProjectRoles, type ProjectRole } from '@/lib/api/projectRoles';
 import { useToast } from '@/components/ui/Toast';
 
 const ApplyModal = dynamic(() => import('@/components/projects/ApplyModal'), {
   ssr: false,
 });
+
+// Loaded only when the Messages tab is opened.
+const ProjectChat = dynamic(() => import('@/components/projects/ProjectChat'), {
+  ssr: false,
+  loading: () => <div className="py-12 text-center text-gray-400">Loading messages...</div>,
+});
+
+type ProjectTab = 'progress' | 'team' | 'messages' | 'github';
 
 const ApplicationsReview = dynamic(() => import('@/components/projects/ApplicationsReview'), {
   ssr: false,
@@ -35,11 +53,16 @@ export default function ProjectDetailPage() {
   const [addingRole, setAddingRole] = useState(false);
   const [roleActionMessage, setRoleActionMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [rosterKey, setRosterKey] = useState(0);
+  const [activeTab, setActiveTab] = useState<ProjectTab>('progress');
+  const [isMember, setIsMember] = useState(false);
   const [notice, setNotice] = useState('');
   const [project, setProject] = useState<ProjectWithSkills | null>(null);
   const { addToast } = useToast();
   const projectId = Array.isArray(params.id) ? params.id[0] : String(params.id || '');
-  
+  const userId = user?.id;
+
   const getSkillColorClass = (skill: string) => {
     const key = skill.toLowerCase();
     if (key.includes('node')) return 'skill-pill-purple';
@@ -47,7 +70,7 @@ export default function ProjectDetailPage() {
     if (key.includes('data') || key.includes('analysis') || key.includes('sql') || key.includes('python')) return 'skill-pill-teal';
     return 'skill-pill-blue';
   };
-  
+
   useEffect(() => {
     let mounted = true;
 
@@ -124,11 +147,59 @@ export default function ProjectDetailPage() {
     };
   }, [projectId]);
 
+  // Show whether the signed-in user has already saved this project.
+  useEffect(() => {
+    let mounted = true;
+
+    if (!userId || !projectId) {
+      setIsSaved(false);
+      return;
+    }
+
+    isProjectSaved(userId, projectId).then((saved) => {
+      if (mounted) setIsSaved(saved);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId, projectId]);
+
   const availableRoles = roles.filter(
     (role) => Number(role.positions_filled) < Number(role.positions_available)
   );
   const isTeamFull = !rolesLoading && roles.length > 0 && availableRoles.length === 0;
-  const isOwner = user?.id === project?.owner_id;
+  const isOwner = !!userId && userId === project?.owner_id;
+  const ownerId = project?.owner_id;
+
+  // Is the signed-in user on this project's team? (Rechecked after approvals.)
+  useEffect(() => {
+    let mounted = true;
+
+    if (!userId || !projectId || !ownerId || userId === ownerId) {
+      setIsMember(false);
+      return;
+    }
+
+    isActiveProjectMember(projectId, userId).then((member) => {
+      if (mounted) setIsMember(member);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId, projectId, ownerId, rosterKey]);
+
+  // Owner and team members can add tasks and use the chat.
+  const canCollaborate = isOwner || isMember;
+  const tabs: Array<{ id: ProjectTab; label: string }> = [
+    { id: 'progress', label: '📈 Progress' },
+    { id: 'team', label: '👥 Team' },
+    ...(canCollaborate ? [{ id: 'messages' as ProjectTab, label: '💬 Messages' }] : []),
+    { id: 'github', label: '🐙 GitHub' },
+  ];
+  const currentTab: ProjectTab =
+    activeTab === 'messages' && !canCollaborate ? 'progress' : activeTab;
 
   const refreshProjectData = async () => {
     if (!projectId) return;
@@ -138,6 +209,8 @@ export default function ProjectDetailPage() {
     ]);
     setProject(projectData);
     setRoles(projectRoles);
+    // Reload the team list (e.g. after an application is approved).
+    setRosterKey((key) => key + 1);
   };
 
   const handleApplyClick = async () => {
@@ -167,10 +240,17 @@ export default function ProjectDetailPage() {
     setSaving(true);
     setNotice('');
     try {
-      const success = await saveProject(user.id, projectId);
-      setNotice(success ? 'Project saved.' : 'Could not save project.');
+      if (isSaved) {
+        const success = await unsaveProject(user.id, projectId);
+        if (success) setIsSaved(false);
+        setNotice(success ? 'Removed from saved projects.' : 'Could not remove project from saved.');
+      } else {
+        const success = await saveProject(user.id, projectId);
+        if (success) setIsSaved(true);
+        setNotice(success ? 'Project saved.' : 'Could not save project.');
+      }
     } catch (error: any) {
-      setNotice(error?.message || 'Could not save project.');
+      setNotice(error?.message || 'Could not update saved projects.');
     } finally {
       setSaving(false);
     }
@@ -272,9 +352,11 @@ export default function ProjectDetailPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-full px-6 py-3 border border-white/10 rounded-lg hover:bg-white/5 transition-all font-semibold sm:w-auto"
+                  className={`w-full px-6 py-3 border rounded-lg hover:bg-white/5 transition-all font-semibold sm:w-auto ${
+                    isSaved ? 'border-purple-500/60 text-purple-200' : 'border-white/10'
+                  }`}
                 >
-                  {saving ? 'Saving...' : '🤍 Save'}
+                  {saving ? 'Saving...' : isSaved ? '💜 Saved' : '🤍 Save'}
                 </button>
                 <Button onClick={handleApplyClick} disabled={rolesLoading || isTeamFull} className="w-full sm:w-auto">
                   {rolesLoading ? 'Checking Roles...' : isTeamFull ? 'Team is Full' : 'Apply Now'}
@@ -331,6 +413,47 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Progress / Team / Messages / GitHub */}
+          <div className="glass rounded-2xl border border-white/10">
+            <div className="flex gap-1 overflow-x-auto border-b border-white/10 px-3 pt-3 sm:px-5" role="tablist">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={currentTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium transition-colors ${
+                    currentTab === tab.id
+                      ? 'border-b-2 border-[var(--accent)] text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-5 sm:p-6 lg:p-8" role="tabpanel">
+              {currentTab === 'progress' && (
+                <ProgressTracker
+                  key={`progress-${rosterKey}`}
+                  projectId={project.id}
+                  canEdit={canCollaborate}
+                  isOwner={isOwner}
+                  currentUserId={userId}
+                  owner={{ id: project.owner_id, name: project.owner?.name || 'Owner' }}
+                />
+              )}
+              {currentTab === 'team' && (
+                <TeamRoster key={rosterKey} projectId={project.id} isOwner={isOwner} />
+              )}
+              {currentTab === 'messages' && canCollaborate && userId && (
+                <ProjectChat projectId={project.id} currentUserId={userId} />
+              )}
+              {currentTab === 'github' && <GitHubRepoCard projectId={project.id} isOwner={isOwner} />}
+            </div>
           </div>
 
           {/* Apply CTA */}

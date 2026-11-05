@@ -9,7 +9,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any }>;
+  /** needsConfirmation is true when Supabase sent a confirmation email instead of signing the user in. */
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: (redirectTo?: string) => Promise<{ error: any }>;
   signInWithGithub: (redirectTo?: string) => Promise<{ error: any }>;
@@ -129,6 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error };
       }
 
+      // With email confirmation turned on there is no session yet, so inserts would be
+      // blocked by RLS. The profile rows are created on the first SIGNED_IN instead.
+      if (!data.session) {
+        return { error: null, needsConfirmation: true };
+      }
+
       // Create profile immediately after signup
       if (data.user) {
         try {
@@ -164,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      return { error };
+      return { error: null, needsConfirmation: false };
     } catch (exception) {
       console.error('SignUp exception:', exception);
       return { error: { message: exception instanceof Error ? exception.message : 'An unexpected error occurred' } };

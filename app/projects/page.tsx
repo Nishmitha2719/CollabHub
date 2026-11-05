@@ -1,12 +1,8 @@
+import { Suspense } from 'react';
 import Container from '@/components/ui/Container';
-import ProjectCard from '@/components/home/ProjectCard';
-import { getProjects } from '@/lib/api/projects';
+import BrowseProjects from '@/components/projects/BrowseProjects';
 
-export const revalidate = 0;
-
-export default async function ProjectsPage() {
-  const projects = await getProjects(undefined, 20);
-
+export default function ProjectsPage() {
   return (
     <div className="py-14 sm:py-16 lg:py-20">
       <Container>
@@ -18,27 +14,15 @@ export default async function ProjectsPage() {
             Discover exciting projects and find your next collaboration
           </p>
 
-          {projects.length === 0 ? (
-            <div className="glass rounded-2xl p-8 border border-white/10 text-center text-gray-400">
-              No approved projects found yet.
-            </div>
-          ) : (
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-10">
-              {projects.map((project) => (
-                <div key={project.id}>
-                  <ProjectCard
-                    id={project.id}
-                    title={project.title}
-                    description={project.description}
-                    skills={project.skills || []}
-                    category={project.category}
-                    teamSize={project.team_size}
-                    applicants={0}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <Suspense
+            fallback={
+              <div className="glass rounded-2xl p-8 border border-white/10 text-center text-gray-400">
+                Loading projects...
+              </div>
+            }
+          >
+            <BrowseProjects />
+          </Suspense>
         </div>
       </Container>
     </div>

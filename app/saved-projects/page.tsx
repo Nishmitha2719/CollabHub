@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import ProjectCard from '@/components/home/ProjectCard';
-import { getSavedProjects } from '@/lib/api/projects';
+import { getApplicationCounts, getSavedProjects } from '@/lib/api/projects';
 import { useAuth } from '@/lib/AuthContext';
 import Loader from '@/components/ui/Loader';
 import type { ProjectWithSkills } from '@/lib/api/projects';
@@ -13,6 +13,7 @@ export default function SavedProjectsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [savedProjects, setSavedProjects] = useState<ProjectWithSkills[]>([]);
+  const [applicantCounts, setApplicantCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const loadedForUserRef = useRef<string | null>(null);
 
@@ -40,6 +41,9 @@ export default function SavedProjectsPage() {
         if (!mounted) return;
         setSavedProjects(data || []);
         loadedForUserRef.current = user.id;
+
+        const counts = await getApplicationCounts((data || []).map((project) => project.id));
+        if (mounted) setApplicantCounts(counts);
       } catch (error) {
         if (!mounted) return;
         console.error('Error loading saved projects:', error);
@@ -94,7 +98,7 @@ export default function SavedProjectsPage() {
                     skills={project.skills || []}
                     category={project.category}
                     teamSize={project.team_size}
-                    applicants={0}
+                    applicants={applicantCounts[project.id] ?? 0}
                   />
                 </div>
               ))}

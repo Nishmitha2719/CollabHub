@@ -26,10 +26,13 @@ export interface ProjectWithSkills extends Project {
 }
 
 export interface ProjectFilters {
+  /** Skill IDs; a project matches if it needs any of them. */
   skills?: string[];
   difficulty?: string;
   duration?: string;
   team_size?: number;
+  /** Team size range from the filter panel: "2-3", "4-5" or "6+". */
+  team_size_range?: string;
   is_paid?: boolean;
   category?: string;
   search?: string;
@@ -39,6 +42,14 @@ export interface ProjectFilters {
 function isUuid(value: string): boolean {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidPattern.test(value);
+}
+
+/**
+ * Characters like , ( ) " \ break a PostgREST `or=(...)` filter, and % _ * are
+ * wildcards. Replace them with spaces so any text the user types is safe to search.
+ */
+function sanitizeSearchTerm(value: string): string {
+  return value.replace(/[,()"'\\%_*:]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function normalizeSkillsFromProject(project: any): string[] {
@@ -132,67 +143,171 @@ function validateUuid(value: string, label: string): void {
   }
 }
 
+/**
+ * Returns the IDs of projects that need any of the given skills,
+ * or null when no skill filter is applied.
+ */
+async function getProjectIdsForSkills(skillIds: string[] | undefined): Promise<string[] | null> {
+  const ids = (skillIds || []).filter(Boolean);
+  if (ids.length === 0) return null;
+
+  const { data, error } = await supabase
+    .from('project_skills')
+    .select('project_id')
+    .in('skill_id', ids);
+
+  if (!error) {
+    return Array.from(new Set<string>((data || []).map((row: any) => String(row.project_id)))).filter(Boolean);
+  }
+
+  // Older schema: project_skills stores skill_name instead of skill_id.
+  if (error.code === '42703') {
+    const { data: skillRows } = await supabase.from('skills').select('name').in('id', ids);
+    const names = (skillRows || []).map((row: any) => row.name).filter(Boolean);
+    if (names.length === 0) return [];
+
+    const { data: byName, error: byNameError } = await supabase
+      .from('project_skills')
+      .select('project_id')
+      .in('skill_name', names);
+
+    if (byNameError) throw byNameError;
+    return Array.from(new Set<string>((byName || []).map((row: any) => String(row.project_id)))).filter(Boolean);
+  }
+
+  throw error;
+}
+
+/** Fetches approved projects for rows from..to (inclusive), with skill names attached. Throws on error. */
+async function queryApprovedProjects(
+  filters: ProjectFilters | undefined,
+  from: number,
+  to: number
+): Promise<ProjectWithSkills[]> {
+  let query = supabase.from('projects').select('*').eq('status', 'approved');
+
+  if (filters?.category) query = query.eq('category', filters.category);
+  if (filters?.difficulty) query = query.eq('difficulty', filters.difficulty);
+  if (filters?.duration) query = query.eq('duration', filters.duration);
+  if (filters?.team_size) query = query.eq('team_size', filters.team_size);
+  if (filters?.team_size_range) {
+    const range = filters.team_size_range.trim();
+    if (range.endsWith('+')) {
+      const min = parseInt(range, 10);
+      if (!Number.isNaN(min)) query = query.gte('team_size', min);
+    } else {
+      const [min, max] = range.split('-').map((part) => parseInt(part, 10));
+      if (!Number.isNaN(min)) query = query.gte('team_size', min);
+      if (!Number.isNaN(max)) query = query.lte('team_size', max);
+    }
+  }
+  if (filters?.is_paid !== undefined) query = query.eq('is_paid', filters.is_paid);
+  if (filters?.search) {
+    const term = sanitizeSearchTerm(filters.search);
+    if (term) query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
+  }
+
+  const skillProjectIds = await getProjectIdsForSkills(filters?.skills);
+  if (skillProjectIds !== null) {
+    if (skillProjectIds.length === 0) return [];
+    query = query.in('id', skillProjectIds);
+  }
+
+  const { data: projectsData, error: projectsError } = await query
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (projectsError) throw projectsError;
+
+  if (!projectsData || projectsData.length === 0) {
+    return [];
+  }
+
+  const projectIds = projectsData.map((p: any) => p.id);
+
+  // Fetch skills separately
+  const { data: skillsData, error: skillsError } = await supabase
+    .from('project_skills')
+    .select('project_id, skills(name)')
+    .in('project_id', projectIds);
+
+  if (skillsError && skillsError.code !== 'PGRST116') {
+    console.error('Error fetching skills:', skillsError);
+  }
+
+  // Create skills map
+  const skillsMap = new Map();
+  (skillsData || []).forEach((item: any) => {
+    if (!skillsMap.has(item.project_id)) {
+      skillsMap.set(item.project_id, []);
+    }
+    const skillName = item.skills?.name || item.skills?.skill_name || item.skill_name;
+    if (skillName) {
+      skillsMap.get(item.project_id).push(skillName);
+    }
+  });
+
+  return projectsData.map((project: any) => ({
+    ...project,
+    skills: skillsMap.get(project.id) || [],
+  }));
+}
+
 // Get approved projects (public)
 export async function getProjects(filters?: ProjectFilters, limit = 10): Promise<ProjectWithSkills[]> {
   try {
     const page = Math.max(1, filters?.page || 1);
     const from = (page - 1) * limit;
     const to = from + limit - 1;
-
-    // Fetch approved projects first (simple query, no FK join)
-    let query = supabase
-      .from('projects')
-      .select('*')
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .range(from, to);
-
-    if (filters?.category) query = query.eq('category', filters.category);
-    if (filters?.difficulty) query = query.eq('difficulty', filters.difficulty);
-    if (filters?.duration) query = query.eq('duration', filters.duration);
-    if (filters?.team_size) query = query.eq('team_size', filters.team_size);
-    if (filters?.is_paid !== undefined) query = query.eq('is_paid', filters.is_paid);
-    if (filters?.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-
-    const { data: projectsData, error: projectsError } = await query;
-
-    if (projectsError) throw projectsError;
-
-    if (!projectsData || projectsData.length === 0) {
-      return [];
-    }
-
-    const projectIds = projectsData.map((p: any) => p.id);
-
-    // Fetch skills separately
-    const { data: skillsData, error: skillsError } = await supabase
-      .from('project_skills')
-      .select('project_id, skills(name)')
-      .in('project_id', projectIds);
-
-    if (skillsError && skillsError.code !== 'PGRST116') {
-      console.error('Error fetching skills:', skillsError);
-    }
-
-    // Create skills map
-    const skillsMap = new Map();
-    (skillsData || []).forEach((item: any) => {
-      if (!skillsMap.has(item.project_id)) {
-        skillsMap.set(item.project_id, []);
-      }
-      const skillName = item.skills?.name || item.skills?.skill_name || item.skill_name;
-      if (skillName) {
-        skillsMap.get(item.project_id).push(skillName);
-      }
-    });
-
-    return (projectsData || []).map((project: any) => ({
-      ...project,
-      skills: skillsMap.get(project.id) || []
-    }));
+    return await queryApprovedProjects(filters, from, to);
   } catch (error) {
     console.error('Error fetching projects:', error);
     return [];
+  }
+}
+
+// Get one page of approved projects plus whether another page exists (used by Browse)
+export async function getProjectsPage(
+  filters: ProjectFilters = {},
+  pageSize = 12
+): Promise<{ projects: ProjectWithSkills[]; hasMore: boolean }> {
+  try {
+    const page = Math.max(1, filters.page || 1);
+    const from = (page - 1) * pageSize;
+    // Ask for one extra row to know whether a next page exists.
+    const rows = await queryApprovedProjects(filters, from, from + pageSize);
+    return { projects: rows.slice(0, pageSize), hasMore: rows.length > pageSize };
+  } catch (error) {
+    console.error('Error fetching projects page:', error);
+    return { projects: [], hasMore: false };
+  }
+}
+
+// Count applications per project (withdrawn ones are not counted)
+export async function getApplicationCounts(projectIds: string[]): Promise<Record<string, number>> {
+  const ids = Array.from(new Set(projectIds.filter(Boolean)));
+  if (ids.length === 0) return {};
+
+  try {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('project_id, status')
+      .in('project_id', ids);
+
+    if (error) throw error;
+
+    const counts: Record<string, number> = {};
+    ids.forEach((id) => {
+      counts[id] = 0;
+    });
+    (data || []).forEach((row: any) => {
+      if (String(row.status || '').toLowerCase() === 'withdrawn') return;
+      counts[row.project_id] = (counts[row.project_id] || 0) + 1;
+    });
+    return counts;
+  } catch (error) {
+    console.error('Error fetching application counts:', error);
+    return {};
   }
 }
 
@@ -416,6 +531,27 @@ export async function unsaveProject(userId: string, projectId: string): Promise<
   }
 }
 
+// Check whether a user has saved a project
+export async function isProjectSaved(userId: string, projectId: string): Promise<boolean> {
+  try {
+    validateUuid(userId, 'userId');
+    validateUuid(projectId, 'projectId');
+
+    const { data, error } = await supabase
+      .from('saved_projects')
+      .select('project_id')
+      .eq('user_id', userId)
+      .eq('project_id', projectId)
+      .limit(1);
+
+    if (error) throw error;
+    return (data || []).length > 0;
+  } catch (error) {
+    console.error('Error checking saved project:', error);
+    return false;
+  }
+}
+
 // Get saved projects
 export async function getSavedProjects(userId: string, limit = 10): Promise<ProjectWithSkills[]> {
   try {
@@ -552,12 +688,14 @@ export async function getAllProjects(limit = 20): Promise<ProjectWithSkills[]> {
 
     console.log(`Found ${projectsData?.length || 0} total projects`);
 
+    const ownerIds = Array.from(new Set((projectsData || []).map((p: any) => p.owner_id))).filter(Boolean);
+    const projectIds = (projectsData || []).map((p: any) => p.id);
+
     // Then fetch owner profiles separately
-    const projectIds = (projectsData || []).map((p: any) => p.owner_id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('id, name, email')
-      .in('id', projectIds);
+      .in('id', ownerIds);
 
     if (profilesError) {
       console.error('Error fetching owner profiles:', profilesError);
@@ -626,12 +764,14 @@ export async function getPendingProjects(limit = 20): Promise<ProjectWithSkills[
 
     console.log(`Found ${projectsData?.length || 0} pending projects`);
 
+    const ownerIds = Array.from(new Set((projectsData || []).map((p: any) => p.owner_id))).filter(Boolean);
+    const projectIds = (projectsData || []).map((p: any) => p.id);
+
     // Then fetch owner profiles separately
-    const projectIds = (projectsData || []).map((p: any) => p.owner_id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('id, name, email')
-      .in('id', projectIds);
+      .in('id', ownerIds);
 
     if (profilesError) {
       console.error('Error fetching owner profiles:', profilesError);

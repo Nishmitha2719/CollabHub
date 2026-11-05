@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/ui/Loader';
@@ -12,10 +12,12 @@ import { Project, UserProfile } from '@/types/database';
 
 export default function ProfilePage() {
   const params = useParams();
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const profileId = Array.isArray(params.id) ? params.id[0] : String(params.id || '');
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  // Name and email of the profile being viewed (from the `profiles` table).
+  const [basicInfo, setBasicInfo] = useState<{ name: string | null; email: string | null } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,26 +38,39 @@ export default function ProfilePage() {
       setLoading(true);
       setError('');
 
-      const [{ data: profileData, error: profileError }, { data: projectData, error: projectsError }] =
-        await Promise.all([
-          supabase.from('user_profiles').select('*').eq('id', id).maybeSingle(),
-          supabase.from('projects').select('*').eq('owner_id', id).order('created_at', { ascending: false }).limit(8),
-        ]);
+      const [
+        { data: profileData, error: profileError },
+        { data: projectData, error: projectsError },
+        { data: basicData, error: basicError },
+      ] = await Promise.all([
+        supabase.from('user_profiles').select('*').eq('id', id).maybeSingle(),
+        supabase.from('projects').select('*').eq('owner_id', id).order('created_at', { ascending: false }).limit(8),
+        supabase.from('profiles').select('id, name, email').eq('id', id).maybeSingle(),
+      ]);
 
       if (profileError) throw profileError;
       if (projectsError) throw projectsError;
+      if (basicError) {
+        // Not fatal: the page still works without the name/email row.
+        console.error('Error fetching basic profile:', basicError);
+      }
+
+      const basic = basicData
+        ? { name: (basicData as any).name ?? null, email: (basicData as any).email ?? null }
+        : null;
+      setBasicInfo(basic);
 
       setProfile(
         ((profileData as UserProfile | null) || {
           id,
-          full_name: user?.user_metadata?.name || user?.email?.split('@')[0],
+          full_name: basic?.name || undefined,
           created_at: '',
           updated_at: '',
         }) as UserProfile
       );
       const baseProfile = (profileData as UserProfile | null) || null;
       setEditData({
-        full_name: baseProfile?.full_name || user?.user_metadata?.name || '',
+        full_name: baseProfile?.full_name || basic?.name || '',
         bio: baseProfile?.bio || '',
         college: baseProfile?.college || '',
         location: baseProfile?.location || '',
@@ -69,20 +84,21 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
+  // Profiles are viewable without signing in; editing still requires being the owner.
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !profileId) return;
+    loadProfile(profileId);
+  }, [authLoading, profileId, loadProfile]);
 
-    if (!user) {
-      router.push(`/auth/login?redirectTo=/profile/${params.id as string}`);
-      return;
-    }
-
-    loadProfile(params.id as string);
-  }, [authLoading, user, params.id, router, loadProfile]);
-
-  const isOwnProfile = user?.id === (params.id as string);
+  const isOwnProfile = !!user && user.id === profileId;
+  const displayEmail = basicInfo?.email || (isOwnProfile ? user?.email : '') || '';
+  const displayName =
+    profile?.full_name ||
+    basicInfo?.name ||
+    (isOwnProfile ? user?.user_metadata?.name || user?.email?.split('@')[0] : '') ||
+    'Profile';
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,7 +175,7 @@ export default function ProfilePage() {
         <div className="py-12 text-center">
           <p className="text-red-400 mb-4">{error}</p>
           <button
-            onClick={() => loadProfile(params.id as string)}
+            onClick={() => loadProfile(profileId)}
             className="px-4 py-2 border border-white/10 rounded-lg hover:bg-white/5 transition"
           >
             Try Again
@@ -181,8 +197,8 @@ export default function ProfilePage() {
     <div className="py-12">
       <Container>
         <div className="glass rounded-2xl p-8 border border-white/10 mb-8">
-          <h1 className="text-3xl font-bold mb-2">{profile.full_name || user?.email?.split('@')[0] || 'My Profile'}</h1>
-          <p className="text-gray-400 mb-4">{user?.email}</p>
+          <h1 className="text-3xl font-bold mb-2">{displayName}</h1>
+          {displayEmail ? <p className="text-gray-400 mb-4">{displayEmail}</p> : null}
           {profile.bio ? <p className="text-gray-300 mb-4">{profile.bio}</p> : null}
           <div className="flex flex-wrap gap-3 text-sm text-gray-400">
             {profile.college ? <span>College: {profile.college}</span> : null}
@@ -292,9 +308,13 @@ export default function ProfilePage() {
         <div className="glass rounded-2xl p-8 border border-white/10">
           <h2 className="text-2xl font-bold mb-4">Projects Posted</h2>
           {projects.length === 0 ? (
-            <p className="text-gray-400">
-              No projects posted yet. <Link href="/post-project" className="text-purple-400 hover:text-purple-300">Post your first project</Link>.
-            </p>
+            isOwnProfile ? (
+              <p className="text-gray-400">
+                No projects posted yet. <Link href="/post-project" className="text-purple-400 hover:text-purple-300">Post your first project</Link>.
+              </p>
+            ) : (
+              <p className="text-gray-400">No projects posted yet.</p>
+            )
           ) : (
             <div className="space-y-3">
               {projects.map((project) => (

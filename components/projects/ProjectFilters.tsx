@@ -1,21 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+
+export interface ProjectFilterValues {
+  skills: string[];
+  difficulty: string;
+  duration: string;
+  team_size: string;
+  is_paid: boolean | undefined;
+}
 
 interface ProjectFiltersProps {
   onFilterChange: (filters: any) => void;
   skills: Array<{ id: string; name: string; category: string }>;
+  /** Starting values, e.g. read from the page URL. */
+  initialFilters?: Partial<ProjectFilterValues>;
 }
 
-export default function ProjectFilters({ onFilterChange, skills }: ProjectFiltersProps) {
-  const [filters, setFilters] = useState({
-    skills: [] as string[],
-    difficulty: '',
-    duration: '',
-    team_size: '',
-    is_paid: undefined as boolean | undefined,
-  });
+const EMPTY_FILTERS: ProjectFilterValues = {
+  skills: [],
+  difficulty: '',
+  duration: '',
+  team_size: '',
+  is_paid: undefined,
+};
+
+export default function ProjectFilters({ onFilterChange, skills, initialFilters }: ProjectFiltersProps) {
+  const [filters, setFilters] = useState<ProjectFilterValues>(() => ({
+    ...EMPTY_FILTERS,
+    ...initialFilters,
+    skills: initialFilters?.skills ?? [],
+  }));
 
   const handleFilterChange = (key: string, value: any) => {
     const newFilters = { ...filters, [key]: value };
@@ -31,8 +46,9 @@ export default function ProjectFilters({ onFilterChange, skills }: ProjectFilter
   };
 
   const groupedSkills = skills.reduce((acc, skill) => {
-    if (!acc[skill.category]) acc[skill.category] = [];
-    acc[skill.category].push(skill);
+    const category = skill.category || 'Other';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(skill);
     return acc;
   }, {} as Record<string, typeof skills>);
 
@@ -148,13 +164,7 @@ export default function ProjectFilters({ onFilterChange, skills }: ProjectFilter
 
       <button
         onClick={() => {
-          setFilters({
-            skills: [],
-            difficulty: '',
-            duration: '',
-            team_size: '',
-            is_paid: undefined,
-          });
+          setFilters(EMPTY_FILTERS);
           onFilterChange({});
         }}
         className="w-full px-4 py-2 text-sm border border-white/10 rounded-lg hover:bg-white/5 transition"

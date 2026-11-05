@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface ToastProps {
@@ -13,24 +13,53 @@ interface ToastState extends ToastProps {
   id: string;
 }
 
-const useToast = () => {
+interface ToastContextValue {
+  toasts: ToastState[];
+  addToast: (toast: ToastProps) => void;
+  removeToast: (id: string) => void;
+}
+
+const ToastContext = createContext<ToastContextValue | null>(null);
+
+/**
+ * Holds every toast in one place and renders a single container for the whole app.
+ * Wrap the app with this in app/layout.tsx so toasts from any page are visible.
+ */
+export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastState[]>([]);
 
-  const addToast = (toast: ToastProps) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const newToast: ToastState = { ...toast, id };
-    setToasts((prev) => [...prev, newToast]);
-
-    // Auto-remove after duration
-    const duration = toast.duration || 3000;
-    setTimeout(() => removeToast(id), duration);
-  };
-
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
-  return { toasts, addToast, removeToast };
+  const addToast = useCallback(
+    (toast: ToastProps) => {
+      const id = Math.random().toString(36).slice(2, 11);
+      setToasts((prev) => [...prev, { ...toast, id }]);
+
+      // Auto-remove after duration
+      const duration = toast.duration || 3000;
+      setTimeout(() => removeToast(id), duration);
+    },
+    [removeToast]
+  );
+
+  const value = useMemo(() => ({ toasts, addToast, removeToast }), [toasts, addToast, removeToast]);
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+    </ToastContext.Provider>
+  );
+}
+
+const useToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
 };
 
 interface ToastContainerProps {
@@ -66,7 +95,7 @@ export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm pointer-events-none">
+    <div className="fixed bottom-4 right-4 z-[60] space-y-2 max-w-sm pointer-events-none">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <motion.div

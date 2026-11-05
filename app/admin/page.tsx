@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { getAllProjects, getPendingProjects, approveProject, rejectProject, deleteProject } from '@/lib/api/projects';
 import { isUserAdmin } from '@/lib/api/profiles';
-import { useToast, ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/components/ui/Toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import type { ProjectWithSkills } from '@/lib/api/projects';
 
 export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { toasts, addToast, removeToast } = useToast();
+  // Toasts are rendered once by ToastProvider in app/layout.tsx.
+  const { addToast } = useToast();
   const [projects, setProjects] = useState<ProjectWithSkills[]>([]);
   const [pendingProjects, setPendingProjects] = useState<ProjectWithSkills[]>([]);
   const [loading, setLoading] = useState(true);
@@ -263,8 +264,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

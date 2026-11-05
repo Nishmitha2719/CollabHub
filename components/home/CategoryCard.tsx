@@ -15,7 +15,7 @@ export default function CategoryCard({
   gradient,
 }: CategoryCardProps) {
   return (
-    <Link href={`/projects?category=${title.toLowerCase()}`}>
+    <Link href={`/projects?category=${encodeURIComponent(title)}`}>
       <div className="glass p-6 cursor-pointer group relative overflow-hidden flex flex-col items-center justify-center text-center min-h-[160px] hover:-translate-y-1 hover:scale-[1.02] transition-transform duration-300">
         <div
           className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity`}

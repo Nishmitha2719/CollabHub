@@ -39,24 +39,18 @@ export async function getAvailableProjectRoles(
   projectId: string
 ): Promise<ProjectRole[]> {
   try {
+    // PostgREST can't compare two columns, so fetch once and filter here.
     const { data, error } = await supabase
       .from('project_roles')
       .select('*')
       .eq('project_id', projectId)
-      .lt('positions_filled', supabase.rpc('cast_to_int', { val: 'positions_available' }))
       .order('created_at', { ascending: false });
 
-    // Fallback: fetch all and filter client-side
-    if (error || !data) {
-      const { data: allRoles } = await supabase
-        .from('project_roles')
-        .select('*')
-        .eq('project_id', projectId);
+    if (error) throw error;
 
-      return (allRoles || []).filter((r) => r.positions_filled < r.positions_available);
-    }
-
-    return data;
+    return (data || []).filter(
+      (role: ProjectRole) => Number(role.positions_filled) < Number(role.positions_available)
+    );
   } catch (error) {
     console.error('Error fetching available roles:', error);
     return [];
